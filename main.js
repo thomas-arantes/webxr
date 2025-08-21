@@ -31,7 +31,7 @@ const floor = new THREE.Mesh(
     new THREE.MeshStandardMaterial({ color: 0x808080 })
 );
 floor.rotation.x = -Math.PI / 2;
-scene.add(floor);
+// scene.add(floor);
 
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('../libs/draco/gltf/');
@@ -41,7 +41,7 @@ loader.setDRACOLoader(dracoLoader);
 loader.load('./models/honda_fit.glb', function (gltf) {
 
     const model = gltf.scene;
-    model.position.set(-.22, -.25, .4);
+    // model.position.set(-.22, -.25, .4);
     // model.rotation.set(0.1, 0.5, 0);
     // model.scale.set(30, 30, 30);
     scene.add(model);
