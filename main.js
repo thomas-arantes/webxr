@@ -1,7 +1,7 @@
 import * as THREE from './libs/three.module.js';
 import { VRButton } from './libs/VRButton.js';
-import { GLTFLoader } from '../libs/GLTFLoader.js';
-import { DRACOLoader } from '../libs/DRACOLoader.js';
+import { GLTFLoader } from './libs/GLTFLoader.js';
+import { DRACOLoader } from './libs/DRACOLoader.js';
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x202020);
