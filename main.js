@@ -38,10 +38,10 @@ dracoLoader.setDecoderPath('../libs/draco/gltf/');
 
 const loader = new GLTFLoader();
 loader.setDRACOLoader(dracoLoader);
-loader.load('./models/honda_fit.glb', function (gltf) {
+loader.load('./models/office_of_a_crane_operator.glb', function (gltf) {
 
     const model = gltf.scene;
-    // model.position.set(-.22, -.25, .4);
+    model.position.set(-.22, -1.25, 1.5);
     // model.rotation.set(0.1, 0.5, 0);
     // model.scale.set(30, 30, 30);
     scene.add(model);
