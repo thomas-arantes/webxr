@@ -165,11 +165,11 @@ function makeVersionSprite(text) {
     const sprite = new THREE.Sprite(mat);
 
     // tamanho em "metros" no mundo (ajuste à vontade)
-    sprite.scale.set(0.40, 0.10, 1);
+    sprite.scale.set(0.30, 0.07, 1);
 
     // ancorar no canto inferior esquerdo da visão
     // colocar ~1m à frente e ligeiro offset para baixo/esquerda
-    sprite.position.set(-0.45, -0.30, -1.0);
+    sprite.position.set(-0.50, -0.40, -1);
 
     return sprite;
 }
