@@ -114,8 +114,8 @@ function animate() {
             const moveX = (rightX * lx + forwardX * -ly) * moveSpeed * dt;
             const moveZ = (rightZ * lx + forwardZ * -ly) * moveSpeed * dt;
 
-            xrRig.position.x += moveX;
-            xrRig.position.z += moveZ;
+            xrRig.position.x += moveZ;
+            xrRig.position.z += moveX;
 
             // Exemplo: botão A (0) para "interagir"/click (útil para um gaze cursor)
             if (pad.buttons[0] && pad.buttons[0].pressed) {
