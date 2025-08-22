@@ -45,7 +45,7 @@ loader.setDRACOLoader(dracoLoader);
 loader.load('./models/office_of_a_crane_operator.glb', function (gltf) {
 
     const model = gltf.scene;
-    model.position.set(-.22, -.2, 1.5);
+    model.position.set(-.22, -.2, 3);
     world.add(model);
 
     // ⬇️ Centraliza o mundo com base na perspectiva original da câmera
