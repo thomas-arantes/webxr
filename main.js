@@ -108,8 +108,8 @@ function animate() {
             const yaw = xrRig.rotation.y;
             const forwardX = -Math.sin(yaw);
             const forwardZ = -Math.cos(yaw);
-            const rightX = Math.cos(yaw);
-            const rightZ = -Math.sin(yaw);
+            const rightX = -Math.cos(yaw);
+            const rightZ = Math.sin(yaw);
 
             const moveX = (rightX * lx + forwardX * -ly) * moveSpeed * dt;
             const moveZ = (rightZ * lx + forwardZ * -ly) * moveSpeed * dt;
@@ -132,4 +132,53 @@ window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+function makeVersionSprite(text) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512; canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+
+    // fundo arredondado
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const r = 24;
+    const w = canvas.width, h = canvas.height;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.beginPath();
+    ctx.moveTo(r, 0);
+    ctx.arcTo(w, 0, w, h, r);
+    ctx.arcTo(w, h, 0, h, r);
+    ctx.arcTo(0, h, 0, 0, r);
+    ctx.arcTo(0, 0, w, 0, r);
+    ctx.closePath();
+    ctx.fill();
+
+    // texto
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 48px system-ui, sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, 28, h / 2);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.minFilter = THREE.LinearFilter;
+    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+    const sprite = new THREE.Sprite(mat);
+
+    // tamanho em "metros" no mundo (ajuste à vontade)
+    sprite.scale.set(0.40, 0.10, 1);
+
+    // ancorar no canto inferior esquerdo da visão
+    // colocar ~1m à frente e ligeiro offset para baixo/esquerda
+    sprite.position.set(-0.45, -0.30, -1.0);
+
+    return sprite;
+}
+
+// adicionar quando a sessão VR começar (garante que fique preso ao "headset camera")
+let versionSprite;
+renderer.xr.addEventListener('sessionstart', () => {
+    if (!versionSprite) {
+        versionSprite = makeVersionSprite('Build v0.1.0');
+        camera.add(versionSprite);
+    }
 });

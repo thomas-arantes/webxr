@@ -206,7 +206,6 @@ class VRButton {
         }
 
     }
-
 }
 
 VRButton.xrSessionIsGranted = false;
