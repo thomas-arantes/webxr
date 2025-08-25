@@ -108,14 +108,18 @@ function animate() {
             const yaw = xrRig.rotation.y;
             const forwardX = -Math.sin(yaw);
             const forwardZ = -Math.cos(yaw);
-            const rightX = -Math.cos(yaw);
-            const rightZ = Math.sin(yaw);
 
+            // right (lateral) correto para o sistema X à direita / Z para frente(-)
+            const rightX = Math.cos(yaw);
+            const rightZ = -Math.sin(yaw);
+
+            // movimentação
             const moveX = (rightX * lx + forwardX * -ly) * moveSpeed * dt;
             const moveZ = (rightZ * lx + forwardZ * -ly) * moveSpeed * dt;
 
-            xrRig.position.x += moveZ;
-            xrRig.position.z += moveX;
+            // aplique nos eixos correspondentes (sem inverter)
+            xrRig.position.x += moveX;
+            xrRig.position.z += moveZ;
 
             // Exemplo: botão A (0) para "interagir"/click (útil para um gaze cursor)
             if (pad.buttons[0] && pad.buttons[0].pressed) {
