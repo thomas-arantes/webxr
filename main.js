@@ -51,7 +51,7 @@ loader.setDRACOLoader(dracoLoader);
 loader.load('./models/honda_fit.glb', function (gltf) {
 
     const model = gltf.scene;
-    model.position.set(-.22, 3, 1.5);
+    model.position.set(-.22, 0, 1.5);
     // model.rotation.set(0.1, 0.5, 0);
     // model.scale.set(30, 30, 30);
     scene.add(model);
