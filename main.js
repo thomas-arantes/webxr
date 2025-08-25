@@ -32,17 +32,10 @@ const floor = new THREE.Mesh(
     new THREE.MeshStandardMaterial({ color: 0x808080 })
 );
 floor.rotation.x = -Math.PI / 2;
-scene.add(floor);
+// scene.add(floor);
 
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('../libs/draco/gltf/');
-
-const PLAYER_RADIUS = 0.30;          // “raio” do jogador (em metros)
-const CHECK_HEIGHTS = [0.5, 1.2];    // alturas (joelho, peito) pra raycast
-const raycaster = new THREE.Raycaster();
-const tmpV = new THREE.Vector3();
-const tmpN = new THREE.Vector3();
-const normalMatrix = new THREE.Matrix3();
 
 const loader = new GLTFLoader();
 loader.setDRACOLoader(dracoLoader);
@@ -56,15 +49,6 @@ loader.load('./models/office_of_a_crane_operator.glb', function (gltf) {
 
     const box = new THREE.Box3().setFromObject(model);
     const center = box.getCenter(new THREE.Vector3());
-
-    model.traverse((o) => {
-        if (o.isMesh) {
-            // opcional: use naming p/ filtrar só geometrias grandes
-            // if (!/^col_/i.test(o.name)) return;
-            o.updateMatrixWorld(true);
-            colliders.push(o);
-        }
-    });
 
 }, undefined, function (e) {
     console.error(e);
@@ -101,65 +85,6 @@ const turnSpeed = Math.PI;
 
 const clock = new THREE.Clock();
 
-function applyCollision(rig, delta /* Vector3 */) {
-    // se o movimento é muito pequeno, só aplica
-    if (delta.lengthSq() < 1e-9) {
-        rig.position.add(delta);
-        return;
-    }
-
-    // direção e distância desse passo
-    const dir = tmpV.copy(delta).setY(0);
-    const dist = dir.length();
-    if (dist === 0) { rig.position.add(delta); return; }
-    dir.normalize();
-
-    let blocked = false;
-    let bestHit = null;
-
-    for (const h of CHECK_HEIGHTS) {
-        // origem dos raios em duas alturas
-        const origin = tmpV.set(rig.position.x, rig.position.y + h, rig.position.z);
-
-        // “far” inclui o passo + o raio do jogador — bate “antes” da parede
-        raycaster.set(origin, dir);
-        raycaster.far = PLAYER_RADIUS + dist + 0.02; // 2cm de folga
-
-        const hits = raycaster.intersectObjects(colliders, true);
-        if (hits.length) {
-            const hit = hits[0];
-            // bateu “antes” de terminar o passo?
-            if (hit.distance < PLAYER_RADIUS + dist) {
-                blocked = true;
-                // guarda o mais próximo para normal mais confiável
-                if (!bestHit || hit.distance < bestHit.distance) bestHit = hit;
-            }
-        }
-    }
-
-    if (!blocked) {
-        // livre: aplica o delta normalmente
-        rig.position.add(delta);
-        return;
-    }
-
-    // BLOQUEADO: deslizar no plano da superfície
-    // normal em espaço de mundo
-    tmpN.copy(bestHit.face.normal);
-    normalMatrix.getNormalMatrix(bestHit.object.matrixWorld);
-    tmpN.applyMatrix3(normalMatrix).normalize();
-
-    // projeta o delta no plano perpendicular à normal (efeito “slide”)
-    const slide = tmpV.copy(delta).projectOnPlane(tmpN);
-
-    // Se o slide ficou muito pequeno, evita jitter
-    if (slide.lengthSq() > 1e-8) {
-        rig.position.add(slide);
-        // pequeno afastamento contrário à normal para não “colar” na parede
-        rig.position.addScaledVector(tmpN, 0.002);
-    }
-    // senão, fica parado nesse frame
-}
 
 function animate() {
     renderer.setAnimationLoop(() => {
@@ -167,26 +92,37 @@ function animate() {
 
         const pad = getPad();
         if (pad) {
+            // Mapeamentos mais comuns (Xbox):
+            // axes[0], axes[1] => stick esquerdo (x, y)
+            // axes[2], axes[3] => stick direito (x, y) — às vezes pode ser [2] e [5] em alguns navegadores
             const lx = dz(pad.axes[0] || 0);
             const ly = dz(pad.axes[1] || 0);
             const rx = dz(pad.axes[2] || 0);
 
+            // === ROTAÇÃO (YAW) DO RIG via stick direito (horizontal) ===
             xrRig.rotation.y -= rx * turnSpeed * dt;
 
+            // === MOVIMENTO NO PLANO XZ via stick esquerdo ===
+            // move para frente/atrás relativo ao olhar (só yaw, ignorando pitch do headset)
+            // direções baseadas no heading (yaw) atual do rig:
             const yaw = xrRig.rotation.y;
             const forwardX = -Math.sin(yaw);
             const forwardZ = -Math.cos(yaw);
-            const rightX = Math.cos(yaw);
-            const rightZ = -Math.sin(yaw);
+            const rightX = -Math.cos(yaw);
+            const rightZ = Math.sin(yaw);
 
             const moveX = (rightX * lx + forwardX * -ly) * moveSpeed * dt;
             const moveZ = (rightZ * lx + forwardZ * -ly) * moveSpeed * dt;
 
-            // AQUI: usamos o anti-penetração em vez de mover direto
-            const deltaMove = tmpV.set(moveX, 0, moveZ);
-            applyCollision(xrRig, deltaMove);
-        }
+            xrRig.position.x += moveZ;
+            xrRig.position.z += moveX;
 
+            // Exemplo: botão A (0) para "interagir"/click (útil para um gaze cursor)
+            if (pad.buttons[0] && pad.buttons[0].pressed) {
+                // dispare sua lógica de interação aqui
+                // ex.: raycast a partir do centro da tela
+            }
+        }
         renderer.render(scene, camera);
     });
 }
@@ -246,9 +182,3 @@ renderer.xr.addEventListener('sessionstart', () => {
         camera.add(versionSprite);
     }
 });
-
-renderer.xr.setReferenceSpaceType('local-floor');
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-
-
