@@ -176,12 +176,12 @@ function animate() {
             xrRig.rotation.y -= rx * turnSpeed * dt;
 
             const yaw = xrRig.rotation.y;
-            const forwardX = -Math.sin(yaw);
-            const forwardZ = -Math.cos(yaw);
+            const forwardZ = -Math.sin(yaw);
+            const forwardX = -Math.cos(yaw);
 
             // right (lateral) correto para o sistema X à direita / Z para frente(-)
-            const rightX = Math.cos(yaw);
-            const rightZ = -Math.sin(yaw);
+            const rightZ = Math.cos(yaw);
+            const rightX = -Math.sin(yaw);
 
             // movimentação
             const moveX = (rightX * lx + forwardX * -ly) * moveSpeed * dt;
