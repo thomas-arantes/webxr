@@ -48,7 +48,7 @@ const colliders = []; // geometrias para colisão
 
 const loader = new GLTFLoader();
 loader.setDRACOLoader(dracoLoader);
-loader.load('./models/office_of_a_crane_operator.glb', function (gltf) {
+loader.load('./models/honda_fit.glb', function (gltf) {
 
     const model = gltf.scene;
     model.position.set(-.22, -3, 1.5);
