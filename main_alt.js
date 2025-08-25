@@ -44,12 +44,14 @@ const tmpV = new THREE.Vector3();
 const tmpN = new THREE.Vector3();
 const normalMatrix = new THREE.Matrix3();
 
+const colliders = []; // geometrias para colisão
+
 const loader = new GLTFLoader();
 loader.setDRACOLoader(dracoLoader);
 loader.load('./models/office_of_a_crane_operator.glb', function (gltf) {
 
     const model = gltf.scene;
-    model.position.set(-.22, -.2, 1.5);
+    model.position.set(-.22, -.8, 1.5);
     // model.rotation.set(0.1, 0.5, 0);
     // model.scale.set(30, 30, 30);
     scene.add(model);
