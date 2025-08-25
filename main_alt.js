@@ -176,11 +176,18 @@ function animate() {
             const yaw = xrRig.rotation.y;
             const forwardX = -Math.sin(yaw);
             const forwardZ = -Math.cos(yaw);
+
+            // right (lateral) correto para o sistema X à direita / Z para frente(-)
             const rightX = Math.cos(yaw);
             const rightZ = -Math.sin(yaw);
 
+            // movimentação
             const moveX = (rightX * lx + forwardX * -ly) * moveSpeed * dt;
             const moveZ = (rightZ * lx + forwardZ * -ly) * moveSpeed * dt;
+
+            // aplique nos eixos correspondentes (sem inverter)
+            xrRig.position.x += moveX;
+            xrRig.position.z += moveZ;
 
             // AQUI: usamos o anti-penetração em vez de mover direto
             const deltaMove = tmpV.set(moveX, 0, moveZ);
