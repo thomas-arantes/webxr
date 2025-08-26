@@ -28,6 +28,24 @@ function getHeadBasis(renderer, camera) {
     return { forward: TMP_FWD, right: TMP_RIGHT };
 }
 
+function getHeadYawRadians(renderer, camera) {
+    // Em XR, three.js usa ArrayCamera; pegamos a câmera do HMD
+    const xrCam = renderer.xr.isPresenting ? renderer.xr.getCamera(camera) : camera;
+    const head = xrCam.isArrayCamera ? xrCam.cameras[0] : xrCam;
+
+    head.updateMatrixWorld(true);
+
+    // direção "para frente" do HMD
+    const dir = new THREE.Vector3();
+    head.getWorldDirection(dir); // já normalizado
+    dir.y = 0; // ignorar pitch/roll
+    if (dir.lengthSq() < 1e-6) return xrRig.rotation.y; // fallback
+
+    dir.normalize();
+    // yaw = ângulo em torno de +Y em relação ao eixo -Z
+    return Math.atan2(dir.x, -dir.z);
+}
+
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(4, 1.6, 15);
 camera.rotation.set(0, .4, 0);
@@ -115,21 +133,35 @@ function animate() {
 
         const pad = getPad();
         if (pad) {
-            const lx = dz(pad.axes[0] || 0);
-            const ly = dz(pad.axes[1] || 0);
-            const rx = dz(pad.axes[2] || 0);
+            // sticks
+            const lx_raw = pad.axes[0] || 0;       // esquerdo X (strafe)
+            const ly_raw = pad.axes[1] || 0;       // esquerdo Y (frente/trás)
+            // alguns browsers expõem o stick direito em [2] ou [3]; pegue o que tiver sinal maior
+            const rx_raw = Math.abs(pad.axes[2] || 0) > Math.abs(pad.axes[3] || 0) ? (pad.axes[2] || 0) : (pad.axes[3] || 0);
 
-            // Rotação artificial (smooth-turn) do rig com o stick direito (opcional)
+            // deadzone
+            const lx = Math.abs(lx_raw) < 0.15 ? 0 : lx_raw;
+            const ly = Math.abs(ly_raw) < 0.15 ? 0 : ly_raw;
+            const rx = Math.abs(rx_raw) < 0.15 ? 0 : rx_raw;
+
+            // smooth-turn opcional (rotaciona só o "corpo" artificial)
             xrRig.rotation.y -= rx * turnSpeed * dt;
 
-            // >>> MOVIMENTO RELATIVO AO HEADSET (NÃO AO RIG) <<<
-            const { forward, right } = getHeadBasis(renderer, camera);
+            // >>> MOVIMENTO 100% RELATIVO AO HEADING DO HMD <<<
+            const heading = getHeadYawRadians(renderer, camera);
+            const cosH = Math.cos(heading);
+            const sinH = Math.sin(heading);
 
-            TMP_MOVE.set(0, 0, 0)
-                .addScaledVector(right, lx * moveSpeed * dt)   // strafe
-                .addScaledVector(forward, -ly * moveSpeed * dt); // frente/tras
+            // Convenção: empurrar o stick para CIMA deve andar PARA FRENTE
+            // Em muitos gamepads, "cima" vem como -1, então invertemos o Y aqui:
+            const lyForward = -ly;
 
-            xrRig.position.add(TMP_MOVE);
+            // Rotaciona o vetor (lx, lyForward) pelo heading da cabeça
+            const dx = (lx * cosH - lyForward * sinH) * moveSpeed * dt;
+            const dz = (lx * sinH + lyForward * cosH) * moveSpeed * dt;
+
+            xrRig.position.x += dx;
+            xrRig.position.z += dz;
 
             // Exemplo: botão A (0) para "interagir"/click (útil para um gaze cursor)
             if (pad.buttons[0] && pad.buttons[0].pressed) {
