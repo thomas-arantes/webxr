@@ -6,8 +6,31 @@ import { DRACOLoader } from './libs/DRACOLoader.js';
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x202020);
 
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+// helpers no topo do arquivo (opcional para reaproveitar vetores)
+const Y_UP = new THREE.Vector3(0, 1, 0);
+const TMP_FWD = new THREE.Vector3();
+const TMP_RIGHT = new THREE.Vector3();
+const TMP_MOVE = new THREE.Vector3();
 
+function getHeadBasis(renderer, camera) {
+    // Em XR, three.js devolve uma ArrayCamera; pegue a primeira câmera (HMD)
+    const xrCam = renderer.xr.getCamera(camera);
+    const head = xrCam.isArrayCamera ? xrCam.cameras[0] : xrCam;
+
+    // forward do HMD = -Z no espaço do head, projetado no plano XZ
+    TMP_FWD.set(0, 0, -1).applyQuaternion(head.quaternion);
+    TMP_FWD.y = 0;
+    TMP_FWD.normalize();
+
+    // right = forward x up (resulta em +X como "direita")
+    TMP_RIGHT.copy(TMP_FWD).cross(Y_UP).normalize();
+
+    return { forward: TMP_FWD, right: TMP_RIGHT };
+}
+
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(4, 1.6, 15);
+camera.rotation.set(0, .4, 0);
 const xrRig = new THREE.Group();
 xrRig.position.set(0, 0, 0);
 xrRig.add(camera);
@@ -32,7 +55,7 @@ const floor = new THREE.Mesh(
     new THREE.MeshStandardMaterial({ color: 0x808080 })
 );
 floor.rotation.x = -Math.PI / 2;
-// scene.add(floor);
+scene.add(floor);
 
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('../libs/draco/gltf/');
@@ -92,34 +115,21 @@ function animate() {
 
         const pad = getPad();
         if (pad) {
-            // Mapeamentos mais comuns (Xbox):
-            // axes[0], axes[1] => stick esquerdo (x, y)
-            // axes[2], axes[3] => stick direito (x, y) — às vezes pode ser [2] e [5] em alguns navegadores
             const lx = dz(pad.axes[0] || 0);
             const ly = dz(pad.axes[1] || 0);
             const rx = dz(pad.axes[2] || 0);
 
-            // === ROTAÇÃO (YAW) DO RIG via stick direito (horizontal) ===
+            // Rotação artificial (smooth-turn) do rig com o stick direito (opcional)
             xrRig.rotation.y -= rx * turnSpeed * dt;
 
-            // === MOVIMENTO NO PLANO XZ via stick esquerdo ===
-            // move para frente/atrás relativo ao olhar (só yaw, ignorando pitch do headset)
-            // direções baseadas no heading (yaw) atual do rig:
-            const yaw = xrRig.rotation.y;
-            const forwardX = -Math.sin(yaw);
-            const forwardZ = -Math.cos(yaw);
+            // >>> MOVIMENTO RELATIVO AO HEADSET (NÃO AO RIG) <<<
+            const { forward, right } = getHeadBasis(renderer, camera);
 
-            // right (lateral) correto para o sistema X à direita / Z para frente(-)
-            const rightX = Math.cos(yaw);
-            const rightZ = -Math.sin(yaw);
+            TMP_MOVE.set(0, 0, 0)
+                .addScaledVector(right, lx * moveSpeed * dt)   // strafe
+                .addScaledVector(forward, -ly * moveSpeed * dt); // frente/tras
 
-            // movimentação
-            const moveX = (rightX * lx + forwardX * -ly) * moveSpeed * dt;
-            const moveZ = (rightZ * lx + forwardZ * -ly) * moveSpeed * dt;
-
-            // aplique nos eixos correspondentes (sem inverter)
-            xrRig.position.x += moveX;
-            xrRig.position.z += moveZ;
+            xrRig.position.add(TMP_MOVE);
 
             // Exemplo: botão A (0) para "interagir"/click (útil para um gaze cursor)
             if (pad.buttons[0] && pad.buttons[0].pressed) {
@@ -168,7 +178,7 @@ function makeVersionSprite(text) {
     const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
     const sprite = new THREE.Sprite(mat);
 
-    // tamanho em "metros" no mundo (ajuste à vontade)
+    // tamanho em "metros" no mundo
     sprite.scale.set(0.30, 0.07, 1);
 
     // ancorar no canto inferior esquerdo da visão
