@@ -144,7 +144,7 @@ function animate() {
             // xrRig.rotation.y -= rx * turnSpeed * dt;
 
             // >>> MOVIMENTO RELATIVO AO HEADSET (NÃO AO RIG) <<<
-            const { forward, right } = getHeadBasis(renderer, camera);
+            const { forward, right } = getHeadYawRadians(renderer, camera);
 
             TMP_MOVE.set(0, 0, 0)
                 .addScaledVector(right, lx * moveSpeed * dt)   // strafe
