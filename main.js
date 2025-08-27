@@ -24,7 +24,7 @@ function getHeadBasis(renderer, camera) {
     TMP_FWD.y = 0; TMP_FWD.normalize();
 
     // right = up x forward (regra da mão direita)
-    TMP_RIGHT.copy(Y_UP).cross(TMP_FWD).normalize();
+    TMP_RIGHT.copy(TMP_FWD).cross(Y_UP).normalize();
     return { forward: TMP_FWD, right: TMP_RIGHT };
 }
 
@@ -43,7 +43,7 @@ function getControllerBasis(controller) {
     const q = controller.quaternion ?? controller.matrixWorld.decompose(new THREE.Vector3(), new THREE.Quaternion(), new THREE.Vector3())[1];
     TMP_FWD.set(0, 0, -1).applyQuaternion(q);
     TMP_FWD.y = 0; TMP_FWD.normalize();
-    TMP_RIGHT.copy(Y_UP).cross(TMP_FWD).normalize();
+    TMP_RIGHT.copy(TMP_FWD).cross(Y_UP).normalize();
     return { forward: TMP_FWD, right: TMP_RIGHT };
 }
 
