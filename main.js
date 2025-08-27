@@ -167,6 +167,7 @@ window.addEventListener('resize', () => {
 let versionOnScreen;
 console.log(makeVersionSprite);
 renderer.xr.addEventListener('sessionstart', () => {
-    versionOnScreen = versionSprite.makeVersionSprite(version);
-    xrCam.add(versionSprite);
+    const hud = versionSprite.makeVersionSprite(version);
+    const xrC = renderer.xr.getCamera(camera);
+    xrC.add(hud);
 });
