@@ -124,7 +124,8 @@ function dz(v, d = .15) {
 }
 
 const moveSpeed = 1.5;
-const turnSpeed = Math.PI;
+const SNAP_ANGLE = Math.PI / 6; // 30 graus
+let snapCooldown = false;
 
 const clock = new THREE.Clock();
 
@@ -139,18 +140,33 @@ function animate() {
             const ly = dz(pad.axes[1] || 0);
             const rx = dz(pad.axes[2] || 0);
 
-            // pegue a base escolhida
+            // base de locomoção (head, rig ou controller)
             let basis;
             if (LOCOMOTION_FRAME === 'head') basis = getHeadBasis(renderer, camera);
             else if (LOCOMOTION_FRAME === 'rig') basis = getRigBasis(xrRig);
-            else basis = getControllerBasis(renderer.xr.getController
-                ? renderer.xr.getController(0) : null);
+            else basis = getControllerBasis(renderer.xr.getController ? renderer.xr.getController(0) : null);
 
-            // mova no plano XZ conforme a base
+            // movimento no plano
             TMP_MOVE.set(0, 0, 0)
                 .addScaledVector(basis.right, lx * moveSpeed * dt)
                 .addScaledVector(basis.forward, -ly * moveSpeed * dt);
             xrRig.position.add(TMP_MOVE);
+
+            // SNAP TURN no analógico direito (rx)
+            if (!snapCooldown) {
+                if (rx > 0.7) {  // empurrou para a direita
+                    xrRig.rotation.y -= SNAP_ANGLE;
+                    snapCooldown = true;
+                } else if (rx < -0.7) { // empurrou para a esquerda
+                    xrRig.rotation.y += SNAP_ANGLE;
+                    snapCooldown = true;
+                }
+            }
+
+            // libera cooldown quando soltar o analógico
+            if (snapCooldown && Math.abs(rx) < 0.2) {
+                snapCooldown = false;
+            }
         }
         renderer.render(scene, camera);
     });
