@@ -31,24 +31,6 @@ function getHeadBasis(renderer, camera) {
     return { forward: TMP_FWD, right: TMP_RIGHT };
 }
 
-function getHeadYawRadians(renderer, camera) {
-    // Em XR, three.js usa ArrayCamera; pegamos a câmera do HMD
-    const xrCam = renderer.xr.isPresenting ? renderer.xr.getCamera(camera) : camera;
-    const head = xrCam.isArrayCamera ? xrCam.cameras[0] : xrCam;
-
-    head.updateMatrixWorld(true);
-
-    // direção "para frente" do HMD
-    const dir = new THREE.Vector3();
-    head.getWorldDirection(dir); // já normalizado
-    dir.y = 0; // ignorar pitch/roll
-    if (dir.lengthSq() < 1e-6) return xrRig.rotation.y; // fallback
-
-    dir.normalize();
-    // yaw = ângulo em torno de +Y em relação ao eixo -Z
-    return Math.atan2(dir.x, -dir.z);
-}
-
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(4, 1.6, 15);
 camera.rotation.set(0, .4, 0);
@@ -144,7 +126,7 @@ function animate() {
             // xrRig.rotation.y -= rx * turnSpeed * dt;
 
             // >>> MOVIMENTO RELATIVO AO HEADSET (NÃO AO RIG) <<<
-            const { forward, right } = getHeadYawRadians(renderer, camera);
+            const { forward, right } = getHeadBasis(renderer, camera);
 
             TMP_MOVE.set(0, 0, 0)
                 .addScaledVector(right, lx * moveSpeed * dt)   // strafe
