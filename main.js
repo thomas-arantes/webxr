@@ -2,6 +2,9 @@ import * as THREE from './libs/three.module.js';
 import { VRButton } from './libs/VRButton.js';
 import { GLTFLoader } from './libs/GLTFLoader.js';
 import { DRACOLoader } from './libs/DRACOLoader.js';
+import { versionSprite } from './version_sprite.js';
+
+let version = 'Build v0.0.1';
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x202020);
@@ -133,35 +136,21 @@ function animate() {
 
         const pad = getPad();
         if (pad) {
-            // sticks
-            const lx_raw = pad.axes[0] || 0;       // esquerdo X (strafe)
-            const ly_raw = pad.axes[1] || 0;       // esquerdo Y (frente/trás)
-            // alguns browsers expõem o stick direito em [2] ou [3]; pegue o que tiver sinal maior
-            const rx_raw = Math.abs(pad.axes[2] || 0) > Math.abs(pad.axes[3] || 0) ? (pad.axes[2] || 0) : (pad.axes[3] || 0);
+            const lx = dz(pad.axes[0] || 0);
+            const ly = dz(pad.axes[1] || 0);
+            const rx = dz(pad.axes[2] || 0);
 
-            // deadzone
-            const lx = Math.abs(lx_raw) < 0.15 ? 0 : lx_raw;
-            const ly = Math.abs(ly_raw) < 0.15 ? 0 : ly_raw;
-            const rx = Math.abs(rx_raw) < 0.15 ? 0 : rx_raw;
+            // Rotação artificial (smooth-turn) do rig com o stick direito (opcional)
+            // xrRig.rotation.y -= rx * turnSpeed * dt;
 
-            // smooth-turn opcional (rotaciona só o "corpo" artificial)
-            xrRig.rotation.y -= rx * turnSpeed * dt;
+            // >>> MOVIMENTO RELATIVO AO HEADSET (NÃO AO RIG) <<<
+            const { forward, right } = getHeadBasis(renderer, camera);
 
-            // >>> MOVIMENTO 100% RELATIVO AO HEADING DO HMD <<<
-            const heading = getHeadYawRadians(renderer, camera);
-            const cosH = Math.cos(heading);
-            const sinH = Math.sin(heading);
+            TMP_MOVE.set(0, 0, 0)
+                .addScaledVector(right, lx * moveSpeed * dt)   // strafe
+                .addScaledVector(forward, -ly * moveSpeed * dt); // frente/tras
 
-            // Convenção: empurrar o stick para CIMA deve andar PARA FRENTE
-            // Em muitos gamepads, "cima" vem como -1, então invertemos o Y aqui:
-            const lyForward = -ly;
-
-            // Rotaciona o vetor (lx, lyForward) pelo heading da cabeça
-            const dx = (lx * cosH - lyForward * sinH) * moveSpeed * dt;
-            const dz = (lx * sinH + lyForward * cosH) * moveSpeed * dt;
-
-            xrRig.position.x += dx;
-            xrRig.position.z += dz;
+            xrRig.position.add(TMP_MOVE);
 
             // Exemplo: botão A (0) para "interagir"/click (útil para um gaze cursor)
             if (pad.buttons[0] && pad.buttons[0].pressed) {
@@ -180,51 +169,13 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-function makeVersionSprite(text) {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512; canvas.height = 128;
-    const ctx = canvas.getContext('2d');
 
-    // fundo arredondado
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const r = 24;
-    const w = canvas.width, h = canvas.height;
-    ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    ctx.beginPath();
-    ctx.moveTo(r, 0);
-    ctx.arcTo(w, 0, w, h, r);
-    ctx.arcTo(w, h, 0, h, r);
-    ctx.arcTo(0, h, 0, 0, r);
-    ctx.arcTo(0, 0, w, 0, r);
-    ctx.closePath();
-    ctx.fill();
-
-    // texto
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 48px system-ui, sans-serif';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(text, 28, h / 2);
-
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.minFilter = THREE.LinearFilter;
-    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
-    const sprite = new THREE.Sprite(mat);
-
-    // tamanho em "metros" no mundo
-    sprite.scale.set(0.30, 0.07, 1);
-
-    // ancorar no canto inferior esquerdo da visão
-    // colocar ~1m à frente e ligeiro offset para baixo/esquerda
-    sprite.position.set(-0.50, -0.80, -1);
-
-    return sprite;
-}
 
 // adicionar quando a sessão VR começar (garante que fique preso ao "headset camera")
-let versionSprite;
+// let versionSprite;
 renderer.xr.addEventListener('sessionstart', () => {
     if (!versionSprite) {
-        versionSprite = makeVersionSprite('Build v0.1.0');
+        versionSprite = makeVersionSprite(version);
         camera.add(versionSprite);
     }
 });
