@@ -125,6 +125,7 @@ function dz(v, d = .15) {
 
 const moveSpeed = 1.5;
 const turnSpeed = Math.PI;
+xrRig.rotation.y -= rx * turnSpeed * dt;
 
 const clock = new THREE.Clock();
 
@@ -164,7 +165,6 @@ window.addEventListener('resize', () => {
 });
 
 // adicionar quando a sessão VR começar (garante que fique preso ao "headset camera")
-let versionOnScreen;
 console.log(makeVersionSprite);
 renderer.xr.addEventListener('sessionstart', () => {
     const hud = versionSprite.makeVersionSprite(version);
