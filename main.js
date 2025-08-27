@@ -146,6 +146,7 @@ function animate() {
 }
 animate();
 
+
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
@@ -155,10 +156,9 @@ window.addEventListener('resize', () => {
 
 
 // adicionar quando a sessão VR começar (garante que fique preso ao "headset camera")
-// let versionSprite;
+let versionOnScreen;
+console.log(makeVersionSprite);
 renderer.xr.addEventListener('sessionstart', () => {
-    if (!versionSprite) {
-        versionSprite = makeVersionSprite(version);
-        xrCam.add(versionSprite);
-    }
+    versionOnScreen = versionSprite.makeVersionSprite(version);
+    xrCam.add(versionSprite);
 });
