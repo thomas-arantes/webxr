@@ -17,7 +17,7 @@ const TMP_MOVE = new THREE.Vector3();
 
 function getHeadBasis(renderer, camera) {
     // Em XR, three.js devolve uma ArrayCamera; pegue a primeira câmera (HMD)
-    const xrCam = renderer.xr.getCamera(camera);
+    // const xrCam = renderer.xr.getCamera(camera);
     const head = xrCam.isArrayCamera ? xrCam.cameras[0] : xrCam;
 
     // forward do HMD = -Z no espaço do head, projetado no plano XZ
@@ -31,7 +31,10 @@ function getHeadBasis(renderer, camera) {
     return { forward: TMP_FWD, right: TMP_RIGHT };
 }
 
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const xrCam = renderer.xr.getCamera(camera);
 camera.position.set(4, 1.6, 15);
 camera.rotation.set(0, .4, 0);
 const xrRig = new THREE.Group();
@@ -39,7 +42,6 @@ xrRig.position.set(0, 0, 0);
 xrRig.add(camera);
 scene.add(xrRig);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.xr.enabled = true;
 document.body.appendChild(renderer.domElement);
@@ -74,7 +76,6 @@ loader.load('./models/office_of_a_crane_operator.glb', function (gltf) {
     scene.add(model);
 
     const box = new THREE.Box3().setFromObject(model);
-    const center = box.getCenter(new THREE.Vector3());
 
 }, undefined, function (e) {
     console.error(e);
@@ -158,6 +159,6 @@ window.addEventListener('resize', () => {
 renderer.xr.addEventListener('sessionstart', () => {
     if (!versionSprite) {
         versionSprite = makeVersionSprite(version);
-        camera.add(versionSprite);
+        xrCam.add(versionSprite);
     }
 });
