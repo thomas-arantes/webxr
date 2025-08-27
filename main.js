@@ -15,19 +15,35 @@ const TMP_FWD = new THREE.Vector3();
 const TMP_RIGHT = new THREE.Vector3();
 const TMP_MOVE = new THREE.Vector3();
 
+// HEAD-relative (olhar)
 function getHeadBasis(renderer, camera) {
-    // Em XR, three.js devolve uma ArrayCamera; pegue a primeira câmera (HMD)
-    // const xrCam = renderer.xr.getCamera(camera);
+    const xrCam = renderer.xr.getCamera(camera);
     const head = xrCam.isArrayCamera ? xrCam.cameras[0] : xrCam;
 
-    // forward do HMD = -Z no espaço do head, projetado no plano XZ
-    TMP_FWD.set(0, 0, -1).applyQuaternion(head.quaternion);
-    TMP_FWD.y = 0;
-    TMP_FWD.normalize();
+    TMP_FWD.set(0, 0, -1).applyQuaternion(head.quaternion); // world-space
+    TMP_FWD.y = 0; TMP_FWD.normalize();
 
-    // right = forward x up (resulta em +X como "direita")
-    TMP_RIGHT.copy(TMP_FWD).cross(Y_UP).normalize();
+    // right = up x forward (regra da mão direita)
+    TMP_RIGHT.copy(Y_UP).cross(TMP_FWD).normalize();
+    return { forward: TMP_FWD, right: TMP_RIGHT };
+}
 
+// RIG/body-relative (frente do “corpo” = yaw do xrRig)
+function getRigBasis(xrRig) {
+    const yaw = xrRig.rotation.y;
+    TMP_FWD.set(0, 0, -1).applyAxisAngle(Y_UP, yaw).normalize();
+    TMP_RIGHT.set(1, 0, 0).applyAxisAngle(Y_UP, yaw).normalize();
+    return { forward: TMP_FWD, right: TMP_RIGHT };
+}
+
+// CONTROLLER-relative (se quiser seguir o controle direito, por exemplo)
+function getControllerBasis(controller) {
+    // pegue a orientação do controle; caia para o rig se não houver
+    if (!controller) return getRigBasis(xrRig);
+    const q = controller.quaternion ?? controller.matrixWorld.decompose(new THREE.Vector3(), new THREE.Quaternion(), new THREE.Vector3())[1];
+    TMP_FWD.set(0, 0, -1).applyQuaternion(q);
+    TMP_FWD.y = 0; TMP_FWD.normalize();
+    TMP_RIGHT.copy(Y_UP).cross(TMP_FWD).normalize();
     return { forward: TMP_FWD, right: TMP_RIGHT };
 }
 
@@ -112,48 +128,44 @@ const turnSpeed = Math.PI;
 
 const clock = new THREE.Clock();
 
+const LOCOMOTION_FRAME = 'rig'; // 'head' | 'rig' | 'controller'
+
 
 function animate() {
     renderer.setAnimationLoop(() => {
         const dt = clock.getDelta();
-
         const pad = getPad();
         if (pad) {
             const lx = dz(pad.axes[0] || 0);
             const ly = dz(pad.axes[1] || 0);
             const rx = dz(pad.axes[2] || 0);
 
-            // Rotação artificial (smooth-turn) do rig com o stick direito (opcional)
-            // xrRig.rotation.y -= rx * turnSpeed * dt;
+            // gire apenas o "corpo", não o head:
+            xrRig.rotation.y -= rx * turnSpeed * dt;
 
-            // >>> MOVIMENTO RELATIVO AO HEADSET (NÃO AO RIG) <<<
-            const { forward, right } = getHeadBasis(renderer, camera);
+            // pegue a base escolhida
+            let basis;
+            if (LOCOMOTION_FRAME === 'head') basis = getHeadBasis(renderer, camera);
+            else if (LOCOMOTION_FRAME === 'rig') basis = getRigBasis(xrRig);
+            else basis = getControllerBasis(renderer.xr.getController
+                ? renderer.xr.getController(0) : null);
 
+            // mova no plano XZ conforme a base
             TMP_MOVE.set(0, 0, 0)
-                .addScaledVector(right, lx * moveSpeed * dt)   // strafe
-                .addScaledVector(forward, -ly * moveSpeed * dt); // frente/tras
-
+                .addScaledVector(basis.right, lx * moveSpeed * dt)
+                .addScaledVector(basis.forward, -ly * moveSpeed * dt);
             xrRig.position.add(TMP_MOVE);
-
-            // Exemplo: botão A (0) para "interagir"/click (útil para um gaze cursor)
-            if (pad.buttons[0] && pad.buttons[0].pressed) {
-                // dispare sua lógica de interação aqui
-                // ex.: raycast a partir do centro da tela
-            }
         }
         renderer.render(scene, camera);
     });
 }
 animate();
 
-
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
-
-
 
 // adicionar quando a sessão VR começar (garante que fique preso ao "headset camera")
 let versionOnScreen;
