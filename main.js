@@ -129,7 +129,7 @@ let snapCooldown = false;
 
 const clock = new THREE.Clock();
 
-const LOCOMOTION_FRAME = 'head'; // 'head' | 'rig' | 'controller'
+const LOCOMOTION_FRAME = 'rig'; // 'head' | 'rig' | 'controller'
 
 function animate() {
     renderer.setAnimationLoop(() => {
