@@ -20,31 +20,29 @@ function getHeadBasis(renderer, camera) {
     const xrCam = renderer.xr.getCamera(camera);
     const head = xrCam.isArrayCamera ? xrCam.cameras[0] : xrCam;
 
-    TMP_FWD.set(0, 0, -1).applyQuaternion(head.quaternion);
+    TMP_FWD.set(0, 0, -1).applyQuaternion(head.quaternion); // world-space
     TMP_FWD.y = 0; TMP_FWD.normalize();
 
-    // right = forward × up  (RH, Y-up)
+    // right = up x forward (regra da mão direita)
     TMP_RIGHT.copy(TMP_FWD).cross(Y_UP).normalize();
     return { forward: TMP_FWD, right: TMP_RIGHT };
 }
 
+// RIG/body-relative (frente do “corpo” = yaw do xrRig)
 function getRigBasis(xrRig) {
     const yaw = xrRig.rotation.y;
     TMP_FWD.set(0, 0, -1).applyAxisAngle(Y_UP, yaw).normalize();
-    TMP_RIGHT.copy(TMP_FWD).cross(Y_UP).normalize();
+    TMP_RIGHT.set(1, 0, 0).applyAxisAngle(Y_UP, yaw).normalize();
     return { forward: TMP_FWD, right: TMP_RIGHT };
 }
 
+// CONTROLLER-relative (se quiser seguir o controle direito, por exemplo)
 function getControllerBasis(controller) {
+    // pegue a orientação do controle; caia para o rig se não houver
     if (!controller) return getRigBasis(xrRig);
-    const q = controller.quaternion ?? controller.matrixWorld.decompose(
-        new THREE.Vector3(), new THREE.Quaternion(), new THREE.Vector3()
-    )[1];
-
+    const q = controller.quaternion ?? controller.matrixWorld.decompose(new THREE.Vector3(), new THREE.Quaternion(), new THREE.Vector3())[1];
     TMP_FWD.set(0, 0, -1).applyQuaternion(q);
     TMP_FWD.y = 0; TMP_FWD.normalize();
-
-    // right = forward × up
     TMP_RIGHT.copy(TMP_FWD).cross(Y_UP).normalize();
     return { forward: TMP_FWD, right: TMP_RIGHT };
 }
@@ -126,52 +124,34 @@ function dz(v, d = .15) {
 }
 
 const moveSpeed = 1.5;
-
-// Snap-turn ON (único modo)
-const SNAP_DEGREES = 45;       // tamanho do salto (30/45/60)
-const SNAP_THRESHOLD = 0.75;   // quanto empurrar o RX para disparar
-const SNAP_COOLDOWN = 0.25;    // segundos entre giros
-let snapCooldown = 0;
+const turnSpeed = Math.PI;
 
 const clock = new THREE.Clock();
 
-const LOCOMOTION_FRAME = 'rig'; // 'head' | 'rig' | 'controller'
+const LOCOMOTION_FRAME = 'head'; // 'head' | 'rig' | 'controller'
 
 function animate() {
     renderer.setAnimationLoop(() => {
         const dt = clock.getDelta();
-        snapCooldown -= dt;
-
         const pad = getPad();
         if (pad) {
-            // Analógicos
             const lx = dz(pad.axes[0] || 0);
             const ly = dz(pad.axes[1] || 0);
-            const rx = dz(pad.axes[2] || 0); // eixo X do stick direito
+            const rx = dz(pad.axes[2] || 0);
 
-            // ---------- SNAP-TURN (sem smooth) ----------
-            if (snapCooldown <= 0) {
-                if (rx > SNAP_THRESHOLD) {
-                    xrRig.rotation.y -= THREE.MathUtils.degToRad(SNAP_DEGREES);
-                    snapCooldown = SNAP_COOLDOWN;
-                } else if (rx < -SNAP_THRESHOLD) {
-                    xrRig.rotation.y += THREE.MathUtils.degToRad(SNAP_DEGREES);
-                    snapCooldown = SNAP_COOLDOWN;
-                }
-            }
-
-            // ---------- Movimento (plano XZ) ----------
+            // pegue a base escolhida
             let basis;
             if (LOCOMOTION_FRAME === 'head') basis = getHeadBasis(renderer, camera);
             else if (LOCOMOTION_FRAME === 'rig') basis = getRigBasis(xrRig);
-            else basis = getControllerBasis(renderer.xr.getController ? renderer.xr.getController(0) : null);
+            else basis = getControllerBasis(renderer.xr.getController
+                ? renderer.xr.getController(0) : null);
 
+            // mova no plano XZ conforme a base
             TMP_MOVE.set(0, 0, 0)
                 .addScaledVector(basis.right, lx * moveSpeed * dt)
-                .addScaledVector(basis.forward, -ly * moveSpeed * dt); // inverta o sinal se preferir
+                .addScaledVector(basis.forward, -ly * moveSpeed * dt);
             xrRig.position.add(TMP_MOVE);
         }
-
         renderer.render(scene, camera);
     });
 }
@@ -187,7 +167,6 @@ window.addEventListener('resize', () => {
 let versionOnScreen;
 console.log(makeVersionSprite);
 renderer.xr.addEventListener('sessionstart', () => {
-    const xrCam = renderer.xr.getCamera(camera); // re-obter após iniciar a sessão
     versionOnScreen = versionSprite.makeVersionSprite(version);
-    xrCam.add(versionOnScreen);
+    xrCam.add(versionSprite);
 });
