@@ -265,8 +265,6 @@ const player = {
     halfHeight: HALF
 };
 
-
-
 function playerYRange() {
     const centerY = xrRig.position.y + CENTER_OFFSET;
     return { min: centerY - HALF, max: centerY + HALF };
