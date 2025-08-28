@@ -78,6 +78,29 @@ const floor = new THREE.Mesh(
 floor.rotation.x = -Math.PI / 2;
 scene.add(floor);
 
+const cube0 = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5, 0.5, 0.5),
+    new THREE.MeshStandardMaterial({ color: 0x00ff00 })
+);
+
+const cube1 = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5, 0.5, 0.5),
+    new THREE.MeshStandardMaterial({ color: 0x0000ff })
+);
+
+const cube2 = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5, 0.5, 0.5),
+    new THREE.MeshStandardMaterial({ color: 0xff0000 })
+);
+
+cube0.position.set(2, 1, -2);
+scene.add(cube0);
+cube1.position.set(3, 1, 2);
+scene.add(cube1);
+cube2.position.set(-2, 1, 5);
+scene.add(cube2);
+
+
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('../libs/draco/gltf/');
 
@@ -86,7 +109,7 @@ loader.setDRACOLoader(dracoLoader);
 loader.load('./models/office_of_a_crane_operator.glb', function (gltf) {
 
     const model = gltf.scene;
-    model.position.set(-.22, -.2, 1.5);
+    model.position.set(-1.42, 0, -2.5);
     // model.rotation.set(0.1, 0.5, 0);
     // model.scale.set(30, 30, 30);
     scene.add(model);
