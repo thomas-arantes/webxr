@@ -165,7 +165,7 @@ function dz(v, d = .15) {
     return Math.abs(v) < d ? 0 : (v > 0 ? (v - d) / (1 - d) : (v + d) / (1 - d));
 }
 
-const moveSpeed = 1.5;
+const moveSpeed = 2.5;
 const SNAP_ANGLE = Math.PI / 6; // 30 graus
 let snapCooldown = false;
 
