@@ -121,7 +121,7 @@ loader.setDRACOLoader(dracoLoader);
 loader.load('./models/office_of_a_crane_operator.glb', function (gltf) {
 
     const model = gltf.scene;
-    model.position.set(-1.82, 0, -2.5);
+    model.position.set(-5.82, 0, -3.5);
     // model.rotation.set(0.1, 0.5, 0);
     // model.scale.set(30, 30, 30);
     scene.add(model);
