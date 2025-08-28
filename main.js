@@ -128,8 +128,8 @@ loader.load('./models/office_of_a_crane_operator.glb', function (gltf) {
     model.position.set(-5.82, 0, -3.5);
     // model.rotation.set(0.1, 0.5, 0);
     // model.scale.set(30, 30, 30);
-    scene.add(model);
     model.name = 'col_model';
+    scene.add(model);
 
     collectColliders(model);
 
