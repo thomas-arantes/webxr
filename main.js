@@ -246,7 +246,6 @@ const colliders = [];
 function collectColliders(root) {
     // console.log(root)
     root.traverse(obj => {
-        console.log(obj);
         // use uma convenção: só objetos com nome começando com 'col_' contam
         if (obj.name.startsWith('col_')) {
             obj.updateWorldMatrix(true, false);
@@ -265,6 +264,7 @@ const player = {
     radius: 0.35,
     halfHeight: HALF
 };
+
 
 
 function playerYRange() {
