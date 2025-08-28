@@ -246,8 +246,9 @@ const colliders = [];
 function collectColliders(root) {
     // console.log(root)
     root.traverse(obj => {
+        console.log(obj);
         // use uma convenção: só objetos com nome começando com 'col_' contam
-        if (obj.isMesh && obj.name.startsWith('col_')) {
+        if (obj.name.startsWith('col_')) {
             obj.updateWorldMatrix(true, false);
             const box = new THREE.Box3().setFromObject(obj);
             colliders.push({ box, obj });
