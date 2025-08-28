@@ -192,10 +192,11 @@ function animate() {
             player.pos.copy(xrRig.position);
 
             // TMP_MOVE é seu deslocamento desejado na horizontal
+            player.pos.set(xrRig.position.x, player.pos.y, xrRig.position.z);
             moveWithCollisions(TMP_MOVE);
 
             // sincroniza o rig com a posição do “player”
-            xrRig.position.copy(player.pos);
+            xrRig.position.set(player.pos.x, xrRig.position.y, player.pos.z);
 
             // SNAP TURN no analógico direito (rx)
             if (!snapCooldown) {
@@ -215,6 +216,11 @@ function animate() {
         }
         renderer.render(scene, camera);
     });
+
+    const yr = playerYRange();
+    if (Math.random() < 0.01) { // loga de vez em quando
+        console.log('YR(min,max)=', yr.min.toFixed(2), yr.max.toFixed(2));
+    }
 }
 animate();
 
@@ -249,16 +255,20 @@ function collectColliders(root) {
 collectColliders(scene);
 console.log(colliders);
 
+const CAPSULE_HEIGHT = 1.6;     // altura total do “corpo”
+const HALF = CAPSULE_HEIGHT / 2; // 0.8
+const CENTER_OFFSET = HALF;      // offset do pé (rig.y) até o centro da cápsula
+
 const player = {
-    // posição do "centro" (meio da cápsula em Y)
-    pos: new THREE.Vector3(0, 1.6, 0),
-    radius: 0.35,   // raio do “corpo” em XZ
-    halfHeight: 0.8 // metade da altura (capsule total ~1.6m)
+    pos: new THREE.Vector3(0, 1.6, 0), // pode manter assim; o y aqui é “lógico” (centro)
+    radius: 0.35,
+    halfHeight: HALF
 };
 
-// ajuda: faixa vertical da cápsula
+
 function playerYRange() {
-    return { min: player.pos.y - player.halfHeight, max: player.pos.y + player.halfHeight };
+    const centerY = xrRig.position.y + CENTER_OFFSET; // <= AQUI é o pulo do gato!
+    return { min: centerY - HALF, max: centerY + HALF };
 }
 
 function overlap1D(a0, a1, b0, b1) {
@@ -278,36 +288,28 @@ function intersectsExpandedXZ(p, box, r) {
 
 function moveWithCollisions(desiredDelta) {
     const next = player.pos.clone();
+    const yR = playerYRange();
 
-    // 4.1 — tentar mover no X
+    // X
     if (desiredDelta.x !== 0) {
         next.x = player.pos.x + desiredDelta.x;
-
-        // se colidir com QUALQUER caixa expandida, cancela X
+        let hitX = false;
         for (const { box } of colliders) {
-            if (intersectsExpandedXZ(next, box, player.radius)) {
-                // opcional: tente "encostar" recalculando o máximo deslocamento sem penetrar
-                // simples: zerar X para evitar penetração
-                next.x = player.pos.x;
-                break;
-            }
+            if (intersectsExpandedXZ(next, box, player.radius)) { hitX = true; break; }
         }
+        if (!hitX) player.pos.x = next.x;
     }
 
-    // 4.2 — tentar mover no Z
+    // Z  (sem next===player.pos)
     if (desiredDelta.z !== 0) {
-        next.z = (next === player.pos) ? player.pos.z + desiredDelta.z : next.z + desiredDelta.z;
-
+        next.copy(player.pos);
+        next.z = player.pos.z + desiredDelta.z;
+        let hitZ = false;
         for (const { box } of colliders) {
-            if (intersectsExpandedXZ(next, box, player.radius)) {
-                next.z = (next === player.pos) ? player.pos.z : next.z - desiredDelta.z; // volta Z
-                break;
-            }
+            if (intersectsExpandedXZ(next, box, player.radius)) { hitZ = true; break; }
         }
+        if (!hitZ) player.pos.z = next.z;
     }
-
-    // 4.3 — aplicar resultado
-    player.pos.copy(next);
 }
 
 function debugBoxes() {
