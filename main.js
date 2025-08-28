@@ -79,22 +79,22 @@ floor.rotation.x = -Math.PI / 2;
 scene.add(floor);
 
 const cube0 = new THREE.Mesh(
-    new THREE.BoxGeometry(0.5, 0.5, 0.5),
+    new THREE.BoxGeometry(0.5, 1.5, 0.5),
     new THREE.MeshStandardMaterial({ color: 0x00ff00 })
 );
 
 const cube1 = new THREE.Mesh(
-    new THREE.BoxGeometry(0.5, 0.5, 0.5),
+    new THREE.BoxGeometry(0.5, 1.5, 0.5),
     new THREE.MeshStandardMaterial({ color: 0x0000ff })
 );
 
 const cube2 = new THREE.Mesh(
-    new THREE.BoxGeometry(0.5, 0.5, 0.5),
+    new THREE.BoxGeometry(0.5, 1.5, 0.5),
     new THREE.MeshStandardMaterial({ color: 0xff0000 })
 );
 
 const cube3 = new THREE.Mesh(
-    new THREE.BoxGeometry(0.5, 0.5, 0.5),
+    new THREE.BoxGeometry(0.5, 1.5, 0.5),
     new THREE.MeshStandardMaterial({ color: 0xffff00 })
 );
 
