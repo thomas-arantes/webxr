@@ -78,34 +78,39 @@ const floor = new THREE.Mesh(
 floor.rotation.x = -Math.PI / 2;
 scene.add(floor);
 
-const col_cube0 = new THREE.Mesh(
+const cube0 = new THREE.Mesh(
     new THREE.BoxGeometry(0.5, 0.5, 0.5),
     new THREE.MeshStandardMaterial({ color: 0x00ff00 })
 );
 
-const col_cube1 = new THREE.Mesh(
+const cube1 = new THREE.Mesh(
     new THREE.BoxGeometry(0.5, 0.5, 0.5),
     new THREE.MeshStandardMaterial({ color: 0x0000ff })
 );
 
-const col_cube2 = new THREE.Mesh(
+const cube2 = new THREE.Mesh(
     new THREE.BoxGeometry(0.5, 0.5, 0.5),
     new THREE.MeshStandardMaterial({ color: 0xff0000 })
 );
 
-const col_cube3 = new THREE.Mesh(
+const cube3 = new THREE.Mesh(
     new THREE.BoxGeometry(0.5, 0.5, 0.5),
     new THREE.MeshStandardMaterial({ color: 0xffff00 })
 );
 
-col_cube0.position.set(2, 2, -2);
-scene.add(col_cube0);
-col_cube1.position.set(3, 2, 2);
-scene.add(col_cube1);
-col_cube2.position.set(-2, 2, 5);
-scene.add(col_cube2);
-col_cube3.position.set(4, 2, 3);
-scene.add(col_cube3);
+cube0.name = 'col_cube0';
+cube1.name = 'col_cube1';
+cube2.name = 'col_cube2';
+cube3.name = 'col_cube3';
+
+cube0.position.set(2, 2, -2);
+scene.add(cube0);
+cube1.position.set(3, 2, 2);
+scene.add(cube1);
+cube2.position.set(-2, 2, 5);
+scene.add(cube2);
+cube3.position.set(4, 2, 3);
+scene.add(cube3);
 
 
 const dracoLoader = new DRACOLoader();
@@ -120,6 +125,9 @@ loader.load('./models/office_of_a_crane_operator.glb', function (gltf) {
     // model.rotation.set(0.1, 0.5, 0);
     // model.scale.set(30, 30, 30);
     scene.add(model);
+    model.name = 'col_model';
+
+    collectColliders(model);
 
     const box = new THREE.Box3().setFromObject(model);
 
@@ -226,8 +234,10 @@ renderer.xr.addEventListener('sessionstart', () => {
 const colliders = [];
 
 function collectColliders(root) {
+    // console.log(root)
     root.traverse(obj => {
         // use uma convenção: só objetos com nome começando com 'col_' contam
+        console.log(obj.name);
         if (obj.isMesh && obj.name.startsWith('col_')) {
             obj.updateWorldMatrix(true, false);
             const box = new THREE.Box3().setFromObject(obj);
@@ -235,6 +245,8 @@ function collectColliders(root) {
         }
     });
 }
+
+console.log(colliders);
 
 // chame isso depois que o GLTF carregar:
 collectColliders(scene);
