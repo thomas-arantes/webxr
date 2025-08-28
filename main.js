@@ -245,7 +245,6 @@ function collectColliders(root) {
     });
 }
 
-
 // chame isso depois que o GLTF carregar:
 collectColliders(scene);
 console.log(colliders);
@@ -310,3 +309,12 @@ function moveWithCollisions(desiredDelta) {
     // 4.3 — aplicar resultado
     player.pos.copy(next);
 }
+
+function debugBoxes() {
+    const mat = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+    colliders.forEach(({ box }) => {
+        const helper = new THREE.Box3Helper(box, 0x00ff00);
+        scene.add(helper);
+    });
+}
+debugBoxes();
