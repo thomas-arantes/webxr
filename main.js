@@ -15,6 +15,10 @@ const TMP_FWD = new THREE.Vector3();
 const TMP_RIGHT = new THREE.Vector3();
 const TMP_MOVE = new THREE.Vector3();
 
+const CAPSULE_HEIGHT = 1.6;     // altura total do “corpo”
+const HALF = CAPSULE_HEIGHT / 2; // 0.8
+const CENTER_OFFSET = HALF;      // offset do pé (rig.y) até o centro da cápsula
+
 // HEAD-relative (olhar)
 function getHeadBasis(renderer, camera) {
     const xrCam = renderer.xr.getCamera(camera);
@@ -255,10 +259,6 @@ function collectColliders(root) {
 collectColliders(scene);
 console.log(colliders);
 
-const CAPSULE_HEIGHT = 1.6;     // altura total do “corpo”
-const HALF = CAPSULE_HEIGHT / 2; // 0.8
-const CENTER_OFFSET = HALF;      // offset do pé (rig.y) até o centro da cápsula
-
 const player = {
     pos: new THREE.Vector3(0, 1.6, 0), // pode manter assim; o y aqui é “lógico” (centro)
     radius: 0.35,
@@ -267,7 +267,7 @@ const player = {
 
 
 function playerYRange() {
-    const centerY = xrRig.position.y + CENTER_OFFSET; // <= AQUI é o pulo do gato!
+    const centerY = xrRig.position.y + CENTER_OFFSET;
     return { min: centerY - HALF, max: centerY + HALF };
 }
 
