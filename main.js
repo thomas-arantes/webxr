@@ -266,7 +266,7 @@ function overlap1D(a0, a1, b0, b1) {
     return (a0 <= b1) && (b0 <= a1);
 }
 
-function intersectsExprandedXZ(p, box, r) {
+function intersectsExpandedXZ(p, box, r) {
     const yr = playerYRange();
     if (!overlap1D(yr.min, yr.max, box.min.y, box.max.y)) return false;
 
