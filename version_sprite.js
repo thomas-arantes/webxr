@@ -1,3 +1,4 @@
+import * as THREE from './libs/three.module.js';
 class versionSprite {
     static makeVersionSprite(text) {
         const canvas = document.createElement('canvas');
