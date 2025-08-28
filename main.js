@@ -79,22 +79,22 @@ floor.rotation.x = -Math.PI / 2;
 scene.add(floor);
 
 const cube0 = new THREE.Mesh(
-    new THREE.BoxGeometry(0.5, 1.5, 0.5),
+    new THREE.BoxGeometry(0.5, 2, 0.5),
     new THREE.MeshStandardMaterial({ color: 0x00ff00 })
 );
 
 const cube1 = new THREE.Mesh(
-    new THREE.BoxGeometry(0.5, 1.5, 0.5),
+    new THREE.BoxGeometry(0.5, 2, 0.5),
     new THREE.MeshStandardMaterial({ color: 0x0000ff })
 );
 
 const cube2 = new THREE.Mesh(
-    new THREE.BoxGeometry(0.5, 1.5, 0.5),
+    new THREE.BoxGeometry(0.5, 2, 0.5),
     new THREE.MeshStandardMaterial({ color: 0xff0000 })
 );
 
 const cube3 = new THREE.Mesh(
-    new THREE.BoxGeometry(0.5, 1.5, 0.5),
+    new THREE.BoxGeometry(0.5, 2, 0.5),
     new THREE.MeshStandardMaterial({ color: 0xffff00 })
 );
 
@@ -237,7 +237,6 @@ function collectColliders(root) {
     // console.log(root)
     root.traverse(obj => {
         // use uma convenção: só objetos com nome começando com 'col_' contam
-        console.log(obj.name);
         if (obj.isMesh && obj.name.startsWith('col_')) {
             obj.updateWorldMatrix(true, false);
             const box = new THREE.Box3().setFromObject(obj);
@@ -246,10 +245,10 @@ function collectColliders(root) {
     });
 }
 
-console.log(colliders);
 
 // chame isso depois que o GLTF carregar:
 collectColliders(scene);
+console.log(colliders);
 
 const player = {
     // posição do "centro" (meio da cápsula em Y)
