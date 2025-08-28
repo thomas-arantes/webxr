@@ -98,13 +98,13 @@ const col_cube3 = new THREE.Mesh(
     new THREE.MeshStandardMaterial({ color: 0xffff00 })
 );
 
-col_cube0.position.set(2, 1, -2);
+col_cube0.position.set(2, 2, -2);
 scene.add(col_cube0);
-col_cube1.position.set(3, 1, 2);
+col_cube1.position.set(3, 2, 2);
 scene.add(col_cube1);
-col_cube2.position.set(-2, 1, 5);
+col_cube2.position.set(-2, 2, 5);
 scene.add(col_cube2);
-col_cube3.position.set(4, 1, 3);
+col_cube3.position.set(4, 2, 3);
 scene.add(col_cube3);
 
 
