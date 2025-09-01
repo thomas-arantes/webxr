@@ -202,7 +202,7 @@ function collectColliders(root) {
 
 // chame isso depois que o GLTF carregar:
 collectColliders(scene);
-console.log(colliders);
+// console.log(colliders);
 
 const player = {
     pos: new THREE.Vector3(0, 1.6, 0), // pode manter assim; o y aqui é “lógico” (centro)
@@ -276,6 +276,7 @@ function registerInteractable(mesh, message) {
     mesh.add(panel); // fica “acoplado” ao cubo
     panel.position.set(0, 1.2, 0); // altura acima do cubo (ajuste à vontade)
     interactables.push({ mesh, message, panelSprite: panel });
+    console.log(interactables)
 }
 
 function makeTextPanel(text) {
@@ -390,6 +391,7 @@ function handleInteractionButton(pad) {
     // borda de subida
     if (pressed && !prevBtnPressed) {
         if (currentTarget) {
+            console.log('Interagiu com:', currentTarget.message);
             // alterna visibilidade do painel deste alvo
             currentTarget.panelSprite.visible = !currentTarget.panelSprite.visible;
             // opcional: fechar os outros
