@@ -173,61 +173,6 @@ const clock = new THREE.Clock();
 
 const LOCOMOTION_FRAME = 'rig'; // 'head' | 'rig' | 'controller'
 
-function animate() {
-    renderer.setAnimationLoop(() => {
-        const dt = clock.getDelta();
-        const pad = getPad();
-        if (pad) {
-            const lx = dz(pad.axes[0] || 0);
-            const ly = dz(pad.axes[1] || 0);
-            const rx = dz(pad.axes[2] || 0);
-
-            // base de locomoção (head, rig ou controller)
-            let basis;
-            if (LOCOMOTION_FRAME === 'head') basis = getHeadBasis(renderer, camera);
-            else if (LOCOMOTION_FRAME === 'rig') basis = getRigBasis(xrRig);
-            else basis = getControllerBasis(renderer.xr.getController ? renderer.xr.getController(0) : null);
-
-            // movimento no plano
-            TMP_MOVE.set(0, 0, 0)
-                .addScaledVector(basis.right, lx * moveSpeed * dt)
-                .addScaledVector(basis.forward, -ly * moveSpeed * dt);
-            // pos do jogador = xrRig.position (use a mesma base)
-            player.pos.copy(xrRig.position);
-
-            // TMP_MOVE é seu deslocamento desejado na horizontal
-            player.pos.set(xrRig.position.x, player.pos.y, xrRig.position.z);
-            moveWithCollisions(TMP_MOVE);
-
-            // sincroniza o rig com a posição do “player”
-            xrRig.position.set(player.pos.x, xrRig.position.y, player.pos.z);
-
-            // SNAP TURN no analógico direito (rx)
-            if (!snapCooldown) {
-                if (rx > 0.7) {  // empurrou para a direita
-                    xrRig.rotation.y -= SNAP_ANGLE;
-                    snapCooldown = true;
-                } else if (rx < -0.7) { // empurrou para a esquerda
-                    xrRig.rotation.y += SNAP_ANGLE;
-                    snapCooldown = true;
-                }
-            }
-
-            // libera cooldown quando soltar o analógico
-            if (snapCooldown && Math.abs(rx) < 0.2) {
-                snapCooldown = false;
-            }
-        }
-        renderer.render(scene, camera);
-    });
-
-    const yr = playerYRange();
-    if (Math.random() < 0.01) { // loga de vez em quando
-        console.log('YR(min,max)=', yr.min.toFixed(2), yr.max.toFixed(2));
-    }
-}
-animate();
-
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
@@ -319,3 +264,209 @@ function debugBoxes() {
     });
 }
 debugBoxes();
+
+// === INTERAÇÃO: lista de interagíveis ===
+const interactables = []; // { mesh, message, panelSprite }
+let currentTarget = null; // o mais próximo dentro do raio
+const INTERACT_RADIUS = 1.2; // metros
+
+function registerInteractable(mesh, message) {
+    const panel = makeTextPanel(message);
+    panel.visible = false;
+    mesh.add(panel); // fica “acoplado” ao cubo
+    panel.position.set(0, 1.2, 0); // altura acima do cubo (ajuste à vontade)
+    interactables.push({ mesh, message, panelSprite: panel });
+}
+
+function makeTextPanel(text) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    // desenha balão simples
+    const PADDING = 16, MAX_W = 512;
+    ctx.font = '24px sans-serif';
+    const lines = wrapText(ctx, text, MAX_W - PADDING * 2);
+    const lineH = 30;
+    const w = Math.min(
+        MAX_W,
+        Math.max(...lines.map(l => ctx.measureText(l).width)) + PADDING * 2
+    );
+    const h = lines.length * lineH + PADDING * 2;
+
+    canvas.width = nextPow2(w);
+    canvas.height = nextPow2(h);
+
+    // reconfigurar font após mudar size do canvas
+    ctx.font = '24px sans-serif';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.strokeStyle = '#333333';
+
+    // fundo com borda
+    roundRect(ctx, 0, 0, w, h, 16);
+    ctx.fillStyle = 'rgba(0,0,0,0.75)';
+    ctx.fill();
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    // texto
+    ctx.fillStyle = '#FFFFFF';
+    let y = PADDING + 24;
+    for (const line of lines) {
+        ctx.fillText(line, PADDING, y);
+        y += lineH;
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.minFilter = THREE.LinearFilter;
+    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+    const sprite = new THREE.Sprite(mat);
+
+    // escala para um tamanho legível no mundo (ajuste fino conforme gosto)
+    const SCALE = 0.002; // pixels -> metros
+    sprite.scale.set(w * SCALE, h * SCALE, 1);
+
+    return sprite;
+}
+
+// helpers do canvas
+function wrapText(ctx, text, maxWidth) {
+    const words = text.split(' ');
+    const lines = [];
+    let line = '';
+    for (const w of words) {
+        const test = (line ? line + ' ' : '') + w;
+        if (ctx.measureText(test).width > maxWidth) {
+            if (line) lines.push(line);
+            line = w;
+        } else {
+            line = test;
+        }
+    }
+    if (line) lines.push(line);
+    return lines;
+}
+function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+}
+function nextPow2(v) { let p = 1; while (p < v) p <<= 1; return p; }
+
+registerInteractable(cube0, 'Caixa verde: instruções de segurança...');
+registerInteractable(cube1, 'Caixa azul: checklist do operador...');
+registerInteractable(cube2, 'Caixa vermelha: EPI obrigatório...');
+registerInteractable(cube3, 'Caixa amarela: área de risco...');
+
+function findNearestInteractable() {
+    currentTarget = null;
+    let bestD2 = INTERACT_RADIUS * INTERACT_RADIUS;
+    const px = xrRig.position.x, pz = xrRig.position.z;
+
+    for (const it of interactables) {
+        const wp = new THREE.Vector3();
+        it.mesh.getWorldPosition(wp);
+        // distância no plano XZ
+        const dx = wp.x - px;
+        const dz = wp.z - pz;
+        const d2 = dx * dx + dz * dz;
+        if (d2 <= bestD2) {
+            bestD2 = d2;
+            currentTarget = it;
+        }
+    }
+}
+
+let prevBtnPressed = false;
+
+function handleInteractionButton(pad) {
+    // botão “A” (ou gatilho primário) costuma ser buttons[0] ou [1] dependendo do controle
+    const b = (pad.buttons && pad.buttons[0]) ? pad.buttons[0] : null;
+    const pressed = !!(b && b.pressed);
+
+    // borda de subida
+    if (pressed && !prevBtnPressed) {
+        if (currentTarget) {
+            // alterna visibilidade do painel deste alvo
+            currentTarget.panelSprite.visible = !currentTarget.panelSprite.visible;
+            // opcional: fechar os outros
+            for (const it of interactables) {
+                if (it !== currentTarget) it.panelSprite.visible = false;
+            }
+        }
+    }
+
+    prevBtnPressed = pressed;
+}
+
+function animate() {
+    renderer.setAnimationLoop(() => {
+        const dt = clock.getDelta();
+        const pad = getPad();
+        if (pad) {
+            const lx = dz(pad.axes[0] || 0);
+            const ly = dz(pad.axes[1] || 0);
+            const rx = dz(pad.axes[2] || 0);
+
+            // base de locomoção (head, rig ou controller)
+            let basis;
+            if (LOCOMOTION_FRAME === 'head') basis = getHeadBasis(renderer, camera);
+            else if (LOCOMOTION_FRAME === 'rig') basis = getRigBasis(xrRig);
+            else basis = getControllerBasis(renderer.xr.getController ? renderer.xr.getController(0) : null);
+
+            // movimento no plano
+            TMP_MOVE.set(0, 0, 0)
+                .addScaledVector(basis.right, lx * moveSpeed * dt)
+                .addScaledVector(basis.forward, -ly * moveSpeed * dt);
+            // pos do jogador = xrRig.position (use a mesma base)
+            player.pos.copy(xrRig.position);
+
+            // TMP_MOVE é seu deslocamento desejado na horizontal
+            player.pos.set(xrRig.position.x, player.pos.y, xrRig.position.z);
+            moveWithCollisions(TMP_MOVE);
+
+            // sincroniza o rig com a posição do “player”
+            xrRig.position.set(player.pos.x, xrRig.position.y, player.pos.z);
+
+            // SNAP TURN no analógico direito (rx)
+            if (!snapCooldown) {
+                if (rx > 0.7) {  // empurrou para a direita
+                    xrRig.rotation.y -= SNAP_ANGLE;
+                    snapCooldown = true;
+                } else if (rx < -0.7) { // empurrou para a esquerda
+                    xrRig.rotation.y += SNAP_ANGLE;
+                    snapCooldown = true;
+                }
+            }
+
+            // libera cooldown quando soltar o analógico
+            if (snapCooldown && Math.abs(rx) < 0.2) {
+                snapCooldown = false;
+            }
+        }
+        const yr = playerYRange();
+        if (Math.random() < 0.01) { // loga de vez em quando
+            console.log('YR(min,max)=', yr.min.toFixed(2), yr.max.toFixed(2));
+        }
+
+        // 1) descobrir alvo mais próximo
+        findNearestInteractable();
+
+        // 2) ler botão e alternar painel quando aplicável
+        if (pad) handleInteractionButton(pad);
+
+        // 3) virar os painéis para a câmera (billboard)
+        const xrC = renderer.xr.getCamera(camera);
+        for (const it of interactables) {
+            if (it.panelSprite.visible) {
+                // faz o painel “olhar” para a câmera
+                it.panelSprite.quaternion.copy(xrC.quaternion);
+            }
+        }
+        renderer.render(scene, camera);
+    });
+}
+animate();

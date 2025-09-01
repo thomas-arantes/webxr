@@ -15,6 +15,10 @@ const TMP_FWD = new THREE.Vector3();
 const TMP_RIGHT = new THREE.Vector3();
 const TMP_MOVE = new THREE.Vector3();
 
+const CAPSULE_HEIGHT = 1.6;     // altura total do “corpo”
+const HALF = CAPSULE_HEIGHT / 2; // 0.8
+const CENTER_OFFSET = HALF;      // offset do pé (rig.y) até o centro da cápsula
+
 // HEAD-relative (olhar)
 function getHeadBasis(renderer, camera) {
     const xrCam = renderer.xr.getCamera(camera);
@@ -79,26 +83,38 @@ floor.rotation.x = -Math.PI / 2;
 scene.add(floor);
 
 const cube0 = new THREE.Mesh(
-    new THREE.BoxGeometry(0.5, 0.5, 0.5),
+    new THREE.BoxGeometry(0.5, 2, 0.5),
     new THREE.MeshStandardMaterial({ color: 0x00ff00 })
 );
 
 const cube1 = new THREE.Mesh(
-    new THREE.BoxGeometry(0.5, 0.5, 0.5),
+    new THREE.BoxGeometry(0.5, 2, 0.5),
     new THREE.MeshStandardMaterial({ color: 0x0000ff })
 );
 
 const cube2 = new THREE.Mesh(
-    new THREE.BoxGeometry(0.5, 0.5, 0.5),
+    new THREE.BoxGeometry(0.5, 2, 0.5),
     new THREE.MeshStandardMaterial({ color: 0xff0000 })
 );
 
-cube0.position.set(2, 1, -2);
+const cube3 = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5, 2, 0.5),
+    new THREE.MeshStandardMaterial({ color: 0xffff00 })
+);
+
+cube0.name = 'col_cube0';
+cube1.name = 'col_cube1';
+cube2.name = 'col_cube2';
+cube3.name = 'col_cube3';
+
+cube0.position.set(2, 2, -2);
 scene.add(cube0);
-cube1.position.set(3, 1, 2);
+cube1.position.set(3, 2, 2);
 scene.add(cube1);
-cube2.position.set(-2, 1, 5);
+cube2.position.set(-2, 2, 5);
 scene.add(cube2);
+cube3.position.set(4, 2, 3);
+scene.add(cube3);
 
 
 const dracoLoader = new DRACOLoader();
@@ -109,10 +125,13 @@ loader.setDRACOLoader(dracoLoader);
 loader.load('./models/office_of_a_crane_operator.glb', function (gltf) {
 
     const model = gltf.scene;
-    model.position.set(-1.42, 0, -2.5);
+    model.position.set(-5.82, 0, -3.5);
     // model.rotation.set(0.1, 0.5, 0);
     // model.scale.set(30, 30, 30);
+    model.name = 'col_model';
     scene.add(model);
+
+    collectColliders(model);
 
     const box = new THREE.Box3().setFromObject(model);
 
@@ -146,7 +165,7 @@ function dz(v, d = .15) {
     return Math.abs(v) < d ? 0 : (v > 0 ? (v - d) / (1 - d) : (v + d) / (1 - d));
 }
 
-const moveSpeed = 1.5;
+const moveSpeed = 2.5;
 const SNAP_ANGLE = Math.PI / 6; // 30 graus
 let snapCooldown = false;
 
@@ -173,7 +192,15 @@ function animate() {
             TMP_MOVE.set(0, 0, 0)
                 .addScaledVector(basis.right, lx * moveSpeed * dt)
                 .addScaledVector(basis.forward, -ly * moveSpeed * dt);
-            xrRig.position.add(TMP_MOVE);
+            // pos do jogador = xrRig.position (use a mesma base)
+            player.pos.copy(xrRig.position);
+
+            // TMP_MOVE é seu deslocamento desejado na horizontal
+            player.pos.set(xrRig.position.x, player.pos.y, xrRig.position.z);
+            moveWithCollisions(TMP_MOVE);
+
+            // sincroniza o rig com a posição do “player”
+            xrRig.position.set(player.pos.x, xrRig.position.y, player.pos.z);
 
             // SNAP TURN no analógico direito (rx)
             if (!snapCooldown) {
@@ -193,6 +220,11 @@ function animate() {
         }
         renderer.render(scene, camera);
     });
+
+    const yr = playerYRange();
+    if (Math.random() < 0.01) { // loga de vez em quando
+        console.log('YR(min,max)=', yr.min.toFixed(2), yr.max.toFixed(2));
+    }
 }
 animate();
 
@@ -208,3 +240,82 @@ renderer.xr.addEventListener('sessionstart', () => {
     const xrC = renderer.xr.getCamera(camera);
     xrC.add(hud);
 });
+
+const colliders = [];
+
+function collectColliders(root) {
+    // console.log(root)
+    root.traverse(obj => {
+        // use uma convenção: só objetos com nome começando com 'col_' contam
+        if (obj.name.startsWith('col_')) {
+            obj.updateWorldMatrix(true, false);
+            const box = new THREE.Box3().setFromObject(obj);
+            colliders.push({ box, obj });
+        }
+    });
+}
+
+// chame isso depois que o GLTF carregar:
+collectColliders(scene);
+console.log(colliders);
+
+const player = {
+    pos: new THREE.Vector3(0, 1.6, 0), // pode manter assim; o y aqui é “lógico” (centro)
+    radius: 0.35,
+    halfHeight: HALF
+};
+
+function playerYRange() {
+    const centerY = xrRig.position.y + CENTER_OFFSET;
+    return { min: centerY - HALF, max: centerY + HALF };
+}
+
+function overlap1D(a0, a1, b0, b1) {
+    return (a0 <= b1) && (b0 <= a1);
+}
+
+function intersectsExpandedXZ(p, box, r) {
+    const yr = playerYRange();
+    if (!overlap1D(yr.min, yr.max, box.min.y, box.max.y)) return false;
+
+    if (p.x < box.min.x - r) return false;
+    if (p.x > box.max.x + r) return false;
+    if (p.z < box.min.z - r) return false;
+    if (p.z > box.max.z + r) return false;
+    return true;
+}
+
+function moveWithCollisions(desiredDelta) {
+    const next = player.pos.clone();
+    const yR = playerYRange();
+
+    // X
+    if (desiredDelta.x !== 0) {
+        next.x = player.pos.x + desiredDelta.x;
+        let hitX = false;
+        for (const { box } of colliders) {
+            if (intersectsExpandedXZ(next, box, player.radius)) { hitX = true; break; }
+        }
+        if (!hitX) player.pos.x = next.x;
+    }
+
+    // Z  (sem next===player.pos)
+    if (desiredDelta.z !== 0) {
+        next.copy(player.pos);
+        next.z = player.pos.z + desiredDelta.z;
+        let hitZ = false;
+        for (const { box } of colliders) {
+            if (intersectsExpandedXZ(next, box, player.radius)) { hitZ = true; break; }
+        }
+        if (!hitZ) player.pos.z = next.z;
+    }
+}
+
+function debugBoxes() {
+    const mat = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+    colliders.forEach(({ box }) => {
+        const helper = new THREE.Box3Helper(box, 0x00ff00);
+        scene.add(helper);
+    });
+}
+debugBoxes();
