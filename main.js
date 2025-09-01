@@ -133,8 +133,6 @@ loader.load('./models/office_of_a_crane_operator.glb', function (gltf) {
 
     collectColliders(model);
 
-    const box = new THREE.Box3().setFromObject(model);
-
 }, undefined, function (e) {
     console.error(e);
 });
@@ -268,7 +266,7 @@ debugBoxes();
 // === INTERAÇÃO: lista de interagíveis ===
 const interactables = []; // { mesh, message, panelSprite }
 let currentTarget = null; // o mais próximo dentro do raio
-const INTERACT_RADIUS = 1.2; // metros
+const INTERACT_RADIUS = 3; // metros
 
 function registerInteractable(mesh, message) {
     const panel = makeTextPanel(message);

@@ -118,7 +118,6 @@ function getPad() {
     return null;
 }
 
-// deadzone para os analogicos 
 function dz(v, d = .15) {
     return Math.abs(v) < d ? 0 : (v > 0 ? (v - d) / (1 - d) : (v + d) / (1 - d));
 }
