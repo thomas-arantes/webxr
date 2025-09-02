@@ -371,6 +371,8 @@ registerInteractable(cube1, 'Caixa azul: checklist do operador...');
 registerInteractable(cube2, 'Caixa vermelha: EPI obrigatório...');
 registerInteractable(cube3, 'Caixa amarela: área de risco...');
 
+interactables[0].panelSprite.visible = true;
+
 function findNearestInteractable() {
     currentTarget = null;
     let bestD2 = INTERACT_RADIUS * INTERACT_RADIUS;
