@@ -272,7 +272,7 @@ function registerInteractable(mesh, message) {
     const panel = makeTextPanel(message);
     panel.visible = false;
     mesh.add(panel); // fica “acoplado” ao cubo
-    panel.position.set(0, 1.2, 0); // altura acima do cubo (ajuste à vontade)
+    panel.position.set(0, 1.2, 0.2); // altura acima do cubo (ajuste à vontade)
     interactables.push({ mesh, message, panelSprite: panel });
     console.log(interactables)
 }
@@ -317,11 +317,22 @@ function makeTextPanel(text) {
 
     const tex = new THREE.CanvasTexture(canvas);
     tex.minFilter = THREE.LinearFilter;
-    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+
+    const mat = new THREE.SpriteMaterial({
+        map: tex,
+        transparent: true,
+    });
+
+    // ↓↓↓ evita ser ocultado por geometria à frente / Z-fighting
+    mat.depthTest = false;
+    mat.depthWrite = false;
+
     const sprite = new THREE.Sprite(mat);
 
-    // escala para um tamanho legível no mundo (ajuste fino conforme gosto)
-    const SCALE = 0.002; // pixels -> metros
+    sprite.renderOrder = 999;
+
+    // pixels -> metros
+    const SCALE = 0.002;
     sprite.scale.set(w * SCALE, h * SCALE, 1);
 
     return sprite;
@@ -448,9 +459,9 @@ function animate() {
             }
         }
         const yr = playerYRange();
-        if (Math.random() < 0.01) { // loga de vez em quando
-            console.log('YR(min,max)=', yr.min.toFixed(2), yr.max.toFixed(2));
-        }
+        // if (Math.random() < 0.01) { // loga de vez em quando
+        //     console.log('YR(min,max)=', yr.min.toFixed(2), yr.max.toFixed(2));
+        // }
 
         // 1) descobrir alvo mais próximo
         findNearestInteractable();
@@ -470,3 +481,6 @@ function animate() {
     });
 }
 animate();
+
+// const pad = getPad();
+// console.log(pad.buttons);
