@@ -83,22 +83,22 @@ floor.rotation.x = -Math.PI / 2;
 scene.add(floor);
 
 const cube0 = new THREE.Mesh(
-    new THREE.BoxGeometry(0.5, 2, 0.5),
+    new THREE.BoxGeometry(0.5, .5, 0.5),
     new THREE.MeshStandardMaterial({ color: 0x00ff00 })
 );
 
 const cube1 = new THREE.Mesh(
-    new THREE.BoxGeometry(0.5, 2, 0.5),
+    new THREE.BoxGeometry(0.5, .5, 0.5),
     new THREE.MeshStandardMaterial({ color: 0x0000ff })
 );
 
 const cube2 = new THREE.Mesh(
-    new THREE.BoxGeometry(0.5, 2, 0.5),
+    new THREE.BoxGeometry(0.5, .5, 0.5),
     new THREE.MeshStandardMaterial({ color: 0xff0000 })
 );
 
 const cube3 = new THREE.Mesh(
-    new THREE.BoxGeometry(0.5, 2, 0.5),
+    new THREE.BoxGeometry(0.5, .5, 0.5),
     new THREE.MeshStandardMaterial({ color: 0xffff00 })
 );
 
@@ -107,13 +107,13 @@ cube1.name = 'col_cube1';
 cube2.name = 'col_cube2';
 cube3.name = 'col_cube3';
 
-cube0.position.set(2, 2, -2);
+cube0.position.set(2, 1.3, -2);
 scene.add(cube0);
-cube1.position.set(3, 2, 2);
+cube1.position.set(3, 1.3, 2);
 scene.add(cube1);
-cube2.position.set(-2, 2, 5);
+cube2.position.set(-2, 1.3, 5);
 scene.add(cube2);
-cube3.position.set(4, 2, 3);
+cube3.position.set(4, 1.3, 3);
 scene.add(cube3);
 
 
@@ -266,7 +266,7 @@ debugBoxes();
 // === INTERAÇÃO: lista de interagíveis ===
 const interactables = []; // { mesh, message, panelSprite }
 let currentTarget = null; // o mais próximo dentro do raio
-const INTERACT_RADIUS = 3; // metros
+const INTERACT_RADIUS = 1.4; // metros
 
 function registerInteractable(mesh, message) {
     const panel = makeTextPanel(message);
