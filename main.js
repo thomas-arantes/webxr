@@ -179,17 +179,9 @@ window.addEventListener('resize', () => {
 
 // adicionar quando a sessão VR começar (garante que fique preso ao "headset camera")
 renderer.xr.addEventListener('sessionstart', () => {
-    const xrC = renderer.xr.getCamera(camera);
-
-    uiAnchor = new THREE.Group();
-    uiAnchor.name = 'uiAnchor';
-    uiAnchor.position.set(0, 0, -.9);
-    xrC.add(uiAnchor);
-
-
     const hud = versionSprite.makeVersionSprite(version);
-    hud.position.set(0, .35, 0);
-    uiAnchor.add(hud);
+    const xrC = renderer.xr.getCamera(camera);
+    xrC.add(hud);
 });
 
 const colliders = [];
@@ -209,28 +201,6 @@ function collectColliders(root) {
 // chame isso depois que o GLTF carregar:
 collectColliders(scene);
 // console.log(colliders);
-
-function attachPanelToHUD(sprite, offset = new THREE.Vector3(0, -0.15, 0)) {
-    const xrC = renderer.xr.getCamera(camera);
-    if (!uiAnchor) {
-        // fallback: cria âncora se ainda não existe (ex.: modo não-VR)
-        uiAnchor = new THREE.Group();
-        uiAnchor.position.set(0, 0, -0.9);
-        xrC.add(uiAnchor);
-    }
-    if (sprite.parent) sprite.parent.remove(sprite);
-    uiAnchor.add(sprite);
-    sprite.position.copy(offset);       // ajuste fino vertical/horizontal
-    sprite.visible = true;
-    sprite.renderOrder = 999;           // garante render acima
-}
-
-function detachPanelFromHUD(sprite) {
-    if (sprite.parent === uiAnchor) {
-        uiAnchor.remove(sprite);
-    }
-    sprite.visible = false;
-}
 
 const player = {
     pos: new THREE.Vector3(0, 1.6, 0), // pode manter assim; o y aqui é “lógico” (centro)
@@ -301,8 +271,8 @@ const INTERACT_RADIUS = 3; // metros
 function registerInteractable(mesh, message) {
     const panel = makeTextPanel(message);
     panel.visible = false;
-    // mesh.add(panel); // fica “acoplado” ao cubo
-    // panel.position.set(0, 1.2, 0); // altura acima do cubo (ajuste à vontade)
+    mesh.add(panel); // fica “acoplado” ao cubo
+    panel.position.set(0, 1.2, 0); // altura acima do cubo (ajuste à vontade)
     interactables.push({ mesh, message, panelSprite: panel });
     console.log(interactables)
 }
@@ -374,9 +344,6 @@ function wrapText(ctx, text, maxWidth) {
     if (line) lines.push(line);
     return lines;
 }
-
-let uiAnchor = null;
-
 function roundRect(ctx, x, y, w, h, r) {
     ctx.beginPath();
     ctx.moveTo(x + r, y);
@@ -422,19 +389,12 @@ function handleInteractionButton(pad) {
     // borda de subida
     if (pressed && !prevBtnPressed) {
         if (currentTarget) {
-            const panel = currentTarget.panelSprite;
-
-            // Toggle: se já está no HUD, some; se não, vai pro HUD
-            const isOnHUD = panel.parent === uiAnchor;
-            if (isOnHUD && panel.visible) {
-                detachPanelFromHUD(panel);
-            } else {
-                // Fecha todos os outros
-                for (const it of interactables) {
-                    if (it.panelSprite !== panel) detachPanelFromHUD(it.panelSprite);
-                }
-                // Acopla o painel atual ao HUD (ajuste o offset conforme preferir)
-                attachPanelToHUD(panel, new THREE.Vector3(0, -0.15, 0));
+            console.log('Interagiu com:', currentTarget.message);
+            // alterna visibilidade do painel deste alvo
+            currentTarget.panelSprite.visible = !currentTarget.panelSprite.visible;
+            // opcional: fechar os outros
+            for (const it of interactables) {
+                if (it !== currentTarget) it.panelSprite.visible = false;
             }
         }
     }
@@ -499,13 +459,13 @@ function animate() {
         if (pad) handleInteractionButton(pad);
 
         // 3) virar os painéis para a câmera (billboard)
-        // const xrC = renderer.xr.getCamera(camera);
-        // for (const it of interactables) {
-        //     if (it.panelSprite.visible) {
-        //         // faz o painel “olhar” para a câmera
-        //         it.panelSprite.quaternion.copy(xrC.quaternion);
-        //     }
-        // }
+        const xrC = renderer.xr.getCamera(camera);
+        for (const it of interactables) {
+            if (it.panelSprite.visible) {
+                // faz o painel “olhar” para a câmera
+                it.panelSprite.quaternion.copy(xrC.quaternion);
+            }
+        }
         renderer.render(scene, camera);
     });
 }
