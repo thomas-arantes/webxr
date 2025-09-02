@@ -272,7 +272,7 @@ function registerInteractable(mesh, message) {
     const panel = makeTextPanel(message);
     panel.visible = false;
     mesh.add(panel); // fica “acoplado” ao cubo
-    panel.position.set(0, .2, 0); // altura acima do cubo (ajuste à vontade)
+    panel.position.set(0, .7, 0); // altura acima do cubo (ajuste à vontade)
     interactables.push({ mesh, message, panelSprite: panel });
     console.log(interactables)
 }
