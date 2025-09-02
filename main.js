@@ -109,11 +109,11 @@ cube3.name = 'col_cube3';
 
 cube0.position.set(2, 1.3, -2);
 scene.add(cube0);
-cube1.position.set(3, 1.3, 2);
+cube1.position.set(3, 1.3, 2.4);
 scene.add(cube1);
 cube2.position.set(-2, 1.3, 5);
 scene.add(cube2);
-cube3.position.set(4, 1.3, 3);
+cube3.position.set(4, 1.3, 6);
 scene.add(cube3);
 
 
@@ -272,7 +272,7 @@ function registerInteractable(mesh, message) {
     const panel = makeTextPanel(message);
     panel.visible = false;
     mesh.add(panel); // fica “acoplado” ao cubo
-    panel.position.set(0, 1.2, 0); // altura acima do cubo (ajuste à vontade)
+    panel.position.set(0, .2, 0); // altura acima do cubo (ajuste à vontade)
     interactables.push({ mesh, message, panelSprite: panel });
     console.log(interactables)
 }
