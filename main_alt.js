@@ -414,6 +414,7 @@ function handleInteractionButton(pad) {
     prevBtnPressed = pressed;
 }
 
+
 function animate() {
     renderer.setAnimationLoop(() => {
         const dt = clock.getDelta();

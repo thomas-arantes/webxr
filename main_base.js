@@ -83,22 +83,22 @@ floor.rotation.x = -Math.PI / 2;
 scene.add(floor);
 
 const cube0 = new THREE.Mesh(
-    new THREE.BoxGeometry(0.5, 2, 0.5),
+    new THREE.BoxGeometry(0.5, .5, 0.5),
     new THREE.MeshStandardMaterial({ color: 0x00ff00 })
 );
 
 const cube1 = new THREE.Mesh(
-    new THREE.BoxGeometry(0.5, 2, 0.5),
+    new THREE.BoxGeometry(0.5, .5, 0.5),
     new THREE.MeshStandardMaterial({ color: 0x0000ff })
 );
 
 const cube2 = new THREE.Mesh(
-    new THREE.BoxGeometry(0.5, 2, 0.5),
+    new THREE.BoxGeometry(0.5, .5, 0.5),
     new THREE.MeshStandardMaterial({ color: 0xff0000 })
 );
 
 const cube3 = new THREE.Mesh(
-    new THREE.BoxGeometry(0.5, 2, 0.5),
+    new THREE.BoxGeometry(0.5, .5, 0.5),
     new THREE.MeshStandardMaterial({ color: 0xffff00 })
 );
 
@@ -107,13 +107,13 @@ cube1.name = 'col_cube1';
 cube2.name = 'col_cube2';
 cube3.name = 'col_cube3';
 
-cube0.position.set(2, 2, -2);
+cube0.position.set(2, 1.3, -2);
 scene.add(cube0);
-cube1.position.set(3, 2, 2);
+cube1.position.set(3, 1.3, 2.4);
 scene.add(cube1);
-cube2.position.set(-2, 2, 5);
+cube2.position.set(-2, 1.3, 5);
 scene.add(cube2);
-cube3.position.set(4, 2, 3);
+cube3.position.set(4, 1.3, 6);
 scene.add(cube3);
 
 
@@ -266,13 +266,13 @@ debugBoxes();
 // === INTERAÇÃO: lista de interagíveis ===
 const interactables = []; // { mesh, message, panelSprite }
 let currentTarget = null; // o mais próximo dentro do raio
-const INTERACT_RADIUS = 3; // metros
+const INTERACT_RADIUS = 1.4; // metros
 
 function registerInteractable(mesh, message) {
     const panel = makeTextPanel(message);
     panel.visible = false;
     mesh.add(panel); // fica “acoplado” ao cubo
-    panel.position.set(0, 1.2, 0); // altura acima do cubo (ajuste à vontade)
+    panel.position.set(0, .5, 0); // altura acima do cubo (ajuste à vontade)
     interactables.push({ mesh, message, panelSprite: panel });
     console.log(interactables)
 }
@@ -355,10 +355,10 @@ function roundRect(ctx, x, y, w, h, r) {
 }
 function nextPow2(v) { let p = 1; while (p < v) p <<= 1; return p; }
 
-registerInteractable(cube0, 'Caixa verde: instruções de segurança...');
-registerInteractable(cube1, 'Caixa azul: checklist do operador...');
-registerInteractable(cube2, 'Caixa vermelha: EPI obrigatório...');
-registerInteractable(cube3, 'Caixa amarela: área de risco...');
+registerInteractable(cube0, 'Caixa verde: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.');
+registerInteractable(cube1, 'Caixa azul: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.');
+registerInteractable(cube2, 'Caixa vermelha: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.');
+registerInteractable(cube3, 'Caixa amarela: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.');
 
 function findNearestInteractable() {
     currentTarget = null;

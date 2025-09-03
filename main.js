@@ -402,6 +402,23 @@ function handleInteractionButton(pad) {
     prevBtnPressed = pressed;
 }
 
+const raycaster = new THREE.Raycaster();
+const GAZE_MAX_DIST = 10;        // distância máxima para "encarar"
+const GAZE_DWELL = 1.5;          // seg. olhando para acionar
+let gazeTarget = null;           // { mesh, message, panelSprite }
+let gazeTime = 0;                // tempo acumulado olhando o alvo
+let justTriggered = false;       // trava para não disparar em loop
+
+// mapeia um objeto "filho" de GLTF para o mesh raiz registrado como interagível
+function findInteractableFromObject(obj) {
+    while (obj) {
+        const it = interactables.find(x => x.mesh === obj);
+        if (it) return it;
+        obj = obj.parent;
+    }
+    return null;
+}
+
 function animate() {
     renderer.setAnimationLoop(() => {
         const dt = clock.getDelta();
