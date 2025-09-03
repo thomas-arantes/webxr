@@ -177,17 +177,10 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-let gazeReticle = null;
-
 // adicionar quando a sessão VR começar (garante que fique preso ao "headset camera")
 renderer.xr.addEventListener('sessionstart', () => {
     const hud = versionSprite.makeVersionSprite(version);
     const xrC = renderer.xr.getCamera(camera);
-    if (!gazeReticle) {
-        gazeReticle = makeReticleSprite(96);
-        const xrC = renderer.xr.getCamera(camera);
-        xrC.add(gazeReticle);
-    }
     xrC.add(hud);
 });
 
@@ -409,72 +402,6 @@ function handleInteractionButton(pad) {
     prevBtnPressed = pressed;
 }
 
-const raycaster = new THREE.Raycaster();
-const GAZE_MAX_DIST = 10;        // distância máxima para "encarar"
-const GAZE_DWELL = 1.5;          // seg. olhando para acionar
-let gazeTarget = null;           // { mesh, message, panelSprite }
-let gazeTime = 0;                // tempo acumulado olhando o alvo
-let justTriggered = false;       // trava para não disparar em loop
-
-// mapeia um objeto "filho" de GLTF para o mesh raiz registrado como interagível
-function findInteractableFromObject(obj) {
-    while (obj) {
-        const it = interactables.find(x => x.mesh === obj);
-        if (it) return it;
-        obj = obj.parent;
-    }
-    return null;
-}
-
-function makeReticleSprite(sizePx = 64) {
-    const c = document.createElement('canvas');
-    c.width = c.height = sizePx;
-    const ctx = c.getContext('2d');
-
-    // círculo fino
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.globalAlpha = 0.9;
-    ctx.beginPath();
-    ctx.arc(sizePx / 2, sizePx / 2, sizePx / 3, 0, Math.PI * 2);
-    ctx.stroke();
-
-    const tex = new THREE.CanvasTexture(c);
-    const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false });
-    const sp = new THREE.Sprite(mat);
-    const SCALE = 0.0025; // pixels -> metros
-    sp.scale.set(sizePx * SCALE, sizePx * SCALE, 1);
-    sp.position.set(0, 0, -1.2); // 1.2m à frente dos olhos
-    sp.renderOrder = 998;
-
-    // desenha o progresso (0..1)
-    sp.userData.updateProgress = (p) => {
-        ctx.clearRect(0, 0, sizePx, sizePx);
-        // anel base
-        ctx.globalAlpha = 0.25;
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.arc(sizePx / 2, sizePx / 2, sizePx / 3, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // arco de progresso
-        ctx.globalAlpha = 0.95;
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.lineWidth = 6;
-        ctx.beginPath();
-        ctx.arc(sizePx / 2, sizePx / 2, sizePx / 3, -Math.PI / 2, -Math.PI / 2 + p * 2 * Math.PI);
-        ctx.stroke();
-
-        tex.needsUpdate = true;
-    };
-    // inicia sem progresso
-    sp.userData.updateProgress(0);
-    return sp;
-}
-
-
-
 function animate() {
     renderer.setAnimationLoop(() => {
         const dt = clock.getDelta();
@@ -538,63 +465,6 @@ function animate() {
                 // faz o painel “olhar” para a câmera
                 it.panelSprite.quaternion.copy(xrC.quaternion);
             }
-        }
-
-        // origem/direção do olhar (centro da visão)
-        const origin = new THREE.Vector3();
-        const dir = new THREE.Vector3(0, 0, -1);
-        xrC.getWorldPosition(origin);
-        dir.applyQuaternion(xrC.quaternion).normalize();
-
-        // dispara raio
-        raycaster.set(origin, dir);
-        raycaster.far = GAZE_MAX_DIST;
-
-        // checa colisão com os meshes "clicáveis" (incluindo filhos)
-        const meshes = interactables.map(it => it.mesh);
-        const hits = raycaster.intersectObjects(meshes, true);
-
-        let lookedIt = null;
-        if (hits.length > 0) {
-            const it = findInteractableFromObject(hits[0].object);
-            if (it) lookedIt = it;
-        }
-
-        if (lookedIt && (!currentTarget || currentTarget !== lookedIt)) {
-            // começou a olhar novo alvo
-            currentTarget = lookedIt;
-            gazeTarget = lookedIt;
-            gazeTime = 0;
-            justTriggered = false;
-        } else if (!lookedIt) {
-            // tirou o olhar de qualquer alvo
-            currentTarget = null;
-            gazeTarget = null;
-            gazeTime = 0;
-            justTriggered = false;
-            if (gazeReticle) gazeReticle.userData.updateProgress(0);
-        }
-
-        if (gazeTarget) {
-            gazeTime += dt;
-            const p = Math.min(gazeTime / GAZE_DWELL, 1);
-            if (gazeReticle) gazeReticle.userData.updateProgress(p);
-
-            if (!justTriggered && gazeTime >= GAZE_DWELL) {
-                // atingiu dwell: alterna painel do alvo e fecha os demais
-                gazeTarget.panelSprite.visible = !gazeTarget.panelSprite.visible;
-                for (const it of interactables) if (it !== gazeTarget) it.panelSprite.visible = false;
-
-                // trava até o usuário parar de olhar e olhar de novo
-                justTriggered = true;
-                gazeTime = 0;
-                if (gazeReticle) gazeReticle.userData.updateProgress(0);
-            }
-        }
-
-        // manter os painéis virados para a câmera
-        for (const it of interactables) {
-            if (it.panelSprite.visible) it.panelSprite.quaternion.copy(xrC.quaternion);
         }
         renderer.render(scene, camera);
     });
