@@ -3,26 +3,20 @@ import { VRButton } from './libs/VRButton.js';
 import { GLTFLoader } from './libs/GLTFLoader.js';
 import { DRACOLoader } from './libs/DRACOLoader.js';
 import { versionSprite } from './version_sprite.js';
-import Stats from './libs/stats.module.js';
 
 let version = 'Build v0.0.1';
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xbfe3dd);
-const container = document.getElementById('container');
+scene.background = new THREE.Color(0x202020);
 
-let mixer
-
-const stats = new Stats();
-container.appendChild(stats.dom);
-
+// helpers no topo do arquivo (opcional para reaproveitar vetores)
 const Y_UP = new THREE.Vector3(0, 1, 0);
 const TMP_FWD = new THREE.Vector3();
 const TMP_RIGHT = new THREE.Vector3();
 const TMP_MOVE = new THREE.Vector3();
 
 const CAPSULE_HEIGHT = 1.6;     // altura total do “corpo”
-const HALF = CAPSULE_HEIGHT / 2;
+const HALF = CAPSULE_HEIGHT / 2; // 0.8
 const CENTER_OFFSET = HALF;      // offset do pé (rig.y) até o centro da cápsula
 
 // HEAD-relative (olhar)
@@ -33,6 +27,7 @@ function getHeadBasis(renderer, camera) {
     TMP_FWD.set(0, 0, -1).applyQuaternion(head.quaternion); // world-space
     TMP_FWD.y = 0; TMP_FWD.normalize();
 
+    // right = up x forward (regra da mão direita)
     TMP_RIGHT.copy(TMP_FWD).cross(Y_UP).normalize();
     return { forward: TMP_FWD, right: TMP_RIGHT };
 }
@@ -122,8 +117,29 @@ cube3.position.set(4, 1.3, 6);
 scene.add(cube3);
 
 
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('../libs/draco/gltf/');
+
+const loader = new GLTFLoader();
+loader.setDRACOLoader(dracoLoader);
+loader.load('./models/office_of_a_crane_operator.glb', function (gltf) {
+
+    const model = gltf.scene;
+    model.position.set(-5.82, 0, -3.5);
+    // model.rotation.set(0.1, 0.5, 0);
+    // model.scale.set(30, 30, 30);
+    model.name = 'col_model';
+    scene.add(model);
+
+    collectColliders(model);
+
+}, undefined, function (e) {
+    console.error(e);
+});
+
 let gamepadIndex = null;
 
+// em muitos navegadores móveis, pressionar um botão “acorda” o Gamepad API
 window.addEventListener('gamepadconnected', (e) => {
     gamepadIndex = e.gamepad.index;
     console.log('Controle conectado:', e.gamepad.id);
@@ -161,6 +177,7 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+// adicionar quando a sessão VR começar (garante que fique preso ao "headset camera")
 renderer.xr.addEventListener('sessionstart', () => {
     const hud = versionSprite.makeVersionSprite(version);
     const xrC = renderer.xr.getCamera(camera);
@@ -170,6 +187,7 @@ renderer.xr.addEventListener('sessionstart', () => {
 const colliders = [];
 
 function collectColliders(root) {
+    // console.log(root)
     root.traverse(obj => {
         // use uma convenção: só objetos com nome começando com 'col_' contam
         if (obj.name.startsWith('col_')) {
@@ -180,10 +198,12 @@ function collectColliders(root) {
     });
 }
 
+// chame isso depois que o GLTF carregar:
 collectColliders(scene);
+// console.log(colliders);
 
 const player = {
-    pos: new THREE.Vector3(0, 1.6, 0),
+    pos: new THREE.Vector3(0, 1.6, 0), // pode manter assim; o y aqui é “lógico” (centro)
     radius: 0.35,
     halfHeight: HALF
 };
@@ -222,7 +242,7 @@ function moveWithCollisions(desiredDelta) {
         if (!hitX) player.pos.x = next.x;
     }
 
-    // Z 
+    // Z  (sem next===player.pos)
     if (desiredDelta.z !== 0) {
         next.copy(player.pos);
         next.z = player.pos.z + desiredDelta.z;
@@ -254,6 +274,7 @@ function registerInteractable(mesh, message) {
     mesh.add(panel); // fica “acoplado” ao cubo
     panel.position.set(0, .5, 0); // altura acima do cubo (ajuste à vontade)
     interactables.push({ mesh, message, panelSprite: panel });
+    console.log(interactables)
 }
 
 function makeTextPanel(text) {
@@ -299,7 +320,7 @@ function makeTextPanel(text) {
     const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
     const sprite = new THREE.Sprite(mat);
 
-    // escala para um tamanho legível no mundo
+    // escala para um tamanho legível no mundo (ajuste fino conforme gosto)
     const SCALE = 0.002; // pixels -> metros
     sprite.scale.set(w * SCALE, h * SCALE, 1);
 
@@ -361,248 +382,94 @@ function findNearestInteractable() {
 let prevBtnPressed = false;
 
 function handleInteractionButton(pad) {
+    // botão “A” (ou gatilho primário) costuma ser buttons[0] ou [1] dependendo do controle
     const b = (pad.buttons && pad.buttons[0]) ? pad.buttons[0] : null;
     const pressed = !!(b && b.pressed);
 
+    // borda de subida
     if (pressed && !prevBtnPressed) {
         if (currentTarget) {
             console.log('Interagiu com:', currentTarget.message);
             // alterna visibilidade do painel deste alvo
             currentTarget.panelSprite.visible = !currentTarget.panelSprite.visible;
+            // opcional: fechar os outros
             for (const it of interactables) {
                 if (it !== currentTarget) it.panelSprite.visible = false;
             }
         }
     }
+
     prevBtnPressed = pressed;
 }
 
-// === LOADING OVERLAY ===
-const overlay = document.createElement('div');
-overlay.id = 'loadingOverlay';
-overlay.innerHTML = `
-  <div id="loaderBox" style="display:flex;flex-direction:column;align-items:center;gap:12px;min-width:260px">
-    <div class="logo" style="color:#fff;font:700 14px/1 system-ui,Segoe UI,Arial">Carregando cena…</div>
-    <div class="bar" style="width:60vw;max-width:520px;height:8px;background:#1f2937;border-radius:999px;overflow:hidden">
-      <i id="barFill" style="display:block;height:100%;width:0%;background:#22c55e"></i>
-    </div>
-    <div id="progressText" style="color:#e5e7eb;font:600 12px/1 system-ui,Segoe UI,Arial">0%</div>
-  </div>
-`;
+function animate() {
+    renderer.setAnimationLoop(() => {
+        const dt = clock.getDelta();
+        const pad = getPad();
+        if (pad) {
+            const lx = dz(pad.axes[0] || 0);
+            const ly = dz(pad.axes[1] || 0);
+            const rx = dz(pad.axes[2] || 0);
 
-Object.assign(overlay.style, {
-    position: 'fixed', inset: '0', background: '#0b1220',
-    display: 'grid', placeItems: 'center', zIndex: '9999',
-    transition: 'opacity .35s ease'
-});
-document.body.appendChild(overlay);
+            // base de locomoção (head, rig ou controller)
+            let basis;
+            if (LOCOMOTION_FRAME === 'head') basis = getHeadBasis(renderer, camera);
+            else if (LOCOMOTION_FRAME === 'rig') basis = getRigBasis(xrRig);
+            else basis = getControllerBasis(renderer.xr.getController ? renderer.xr.getController(0) : null);
 
-function setProgress01(p, label = '') {
-    const fill = document.getElementById('barFill');
-    const txt = document.getElementById('progressText');
-    const clamped = Math.max(0, Math.min(1, p));
-    fill.style.width = (clamped * 100).toFixed(1) + '%';
-    txt.textContent = (clamped * 100).toFixed(0) + '% ' + label;
-}
-function hideOverlay() {
-    overlay.style.opacity = '0';
-    overlay.style.pointerEvents = 'none';
-    setTimeout(() => overlay.remove(), 450);
-}
+            // movimento no plano
+            TMP_MOVE.set(0, 0, 0)
+                .addScaledVector(basis.right, lx * moveSpeed * dt)
+                .addScaledVector(basis.forward, -ly * moveSpeed * dt);
+            // pos do jogador = xrRig.position (use a mesma base)
+            player.pos.copy(xrRig.position);
 
-// === LOADING MANAGER ===
-let itemsLoaded = 0, itemsTotal = 0;
-const manager = new THREE.LoadingManager(
-    // onLoad: tudo terminou
-    () => {
-        setProgress01(1, '(pronto)');
-        // inicia o loop de render só agora
-        startRenderLoop();
-        // fade-out do overlay
-        hideOverlay();
-    },
-    // onProgress: url, loaded, total
-    (url, loaded, total) => {
-        itemsLoaded = loaded;
-        itemsTotal = total || itemsTotal; // total pode vir 0 em alguns casos
-        const p = total ? loaded / total : 0; // fallback simples
-        setProgress01(p, `(${loaded}/${total})`);
-    },
-    // onError
-    (url) => {
-        console.warn('Falha ao carregar:', url);
-    }
-);
+            // TMP_MOVE é seu deslocamento desejado na horizontal
+            player.pos.set(xrRig.position.x, player.pos.y, xrRig.position.z);
+            moveWithCollisions(TMP_MOVE);
 
-// function animate() {
-//     renderer.setAnimationLoop(() => {
-//         stats.update();
-//         const dt = clock.getDelta();
-//         mixer.update(dt * 2);
-//         const pad = getPad();
-//         if (pad) {
-//             const lx = dz(pad.axes[0] || 0);
-//             const ly = dz(pad.axes[1] || 0);
-//             const rx = dz(pad.axes[2] || 0);
+            // sincroniza o rig com a posição do “player”
+            xrRig.position.set(player.pos.x, xrRig.position.y, player.pos.z);
 
-//             // base de locomoção (head, rig ou controller)
-//             let basis;
-//             if (LOCOMOTION_FRAME === 'head') basis = getHeadBasis(renderer, camera);
-//             else if (LOCOMOTION_FRAME === 'rig') basis = getRigBasis(xrRig);
-//             else basis = getControllerBasis(renderer.xr.getController ? renderer.xr.getController(0) : null);
+            // SNAP TURN no analógico direito (rx)
+            if (!snapCooldown) {
+                if (rx > 0.7) {  // empurrou para a direita
+                    xrRig.rotation.y -= SNAP_ANGLE;
+                    snapCooldown = true;
+                } else if (rx < -0.7) { // empurrou para a esquerda
+                    xrRig.rotation.y += SNAP_ANGLE;
+                    snapCooldown = true;
+                }
+            }
 
-//             // movimento no plano
-//             TMP_MOVE.set(0, 0, 0)
-//                 .addScaledVector(basis.right, lx * moveSpeed * dt)
-//                 .addScaledVector(basis.forward, -ly * moveSpeed * dt);
-//             // pos do jogador = xrRig.position (use a mesma base)
-//             player.pos.copy(xrRig.position);
-
-//             // TMP_MOVE é seu deslocamento desejado na horizontal
-//             player.pos.set(xrRig.position.x, player.pos.y, xrRig.position.z);
-//             moveWithCollisions(TMP_MOVE);
-
-//             // sincroniza o rig com a posição do “player”
-//             xrRig.position.set(player.pos.x, xrRig.position.y, player.pos.z);
-
-//             // SNAP TURN no analógico direito (rx)
-//             if (!snapCooldown) {
-//                 if (rx > 0.7) {  // empurrou para a direita
-//                     xrRig.rotation.y -= SNAP_ANGLE;
-//                     snapCooldown = true;
-//                 } else if (rx < -0.7) { // empurrou para a esquerda
-//                     xrRig.rotation.y += SNAP_ANGLE;
-//                     snapCooldown = true;
-//                 }
-//             }
-
-//             // libera cooldown quando soltar o analógico
-//             if (snapCooldown && Math.abs(rx) < 0.2) {
-//                 snapCooldown = false;
-//             }
-//         }
-//         const yr = playerYRange();
-
-//         // 1) descobrir alvo mais próximo
-//         findNearestInteractable();
-
-//         // 2) ler botão e alternar painel quando aplicável
-//         if (pad) handleInteractionButton(pad);
-
-//         // 3) virar os painéis para a câmera (billboard)
-//         const xrC = renderer.xr.getCamera(camera);
-//         for (const it of interactables) {
-//             if (it.panelSprite.visible) {
-//                 it.panelSprite.quaternion.copy(xrC.quaternion);
-//             }
-//         }
-//         renderer.render(scene, camera);
-//     });
-// }
-
-const dracoLoader = new DRACOLoader(manager);
-dracoLoader.setDecoderPath('../libs/draco/gltf/');
-
-const loader = new GLTFLoader(manager);
-loader.setDRACOLoader(dracoLoader);
-
-loader.load('./models/kansai.glb', function (gltf) {
-
-    const model = gltf.scene;
-    model.position.set(-5.82, 0, -3.5);
-    model.name = 'col_model';
-    scene.add(model);
-
-    collectColliders(model);
-
-}, function (xhr) {
-    // console.log((xhr.loaded / xhr.total * 100) + '% loaded');
-}, function (e) {
-    console.error(e);
-});
-
-loader.load('./models/honda_fit.glb', function (gltf) {
-
-    const model = gltf.scene;
-    model.position.set(.72, 0, 7.8);
-    model.scale.set(6, 6, 6);
-    model.name = 'col_model';
-    scene.add(model);
-
-    collectColliders(model);
-
-}, function (xhr) {
-    // console.log((xhr.loaded / xhr.total * 100) + '% loaded');
-}, function (error) {
-    console.error(error);
-});
-
-loader.load('models/sonic.glb', function (gltf) {
-
-    const model = gltf.scene;
-    model.position.set(2, 0, 9);
-    // model.scale.set(1, 1, 1);
-    scene.add(model);
-
-    mixer = new THREE.AnimationMixer(model);
-    mixer.clipAction(gltf.animations[0]).play();
-
-    // renderer.setAnimationLoop(animate);
-
-}, undefined, function (error) {
-
-    console.error(error);
-
-});
-
-function renderLoop() {
-    stats.update();
-    const dt = clock.getDelta();
-
-    if (mixer) mixer.update(dt * 2);
-
-    const pad = getPad();
-    if (pad) {
-        const lx = dz(pad.axes[0] || 0);
-        const ly = dz(pad.axes[1] || 0);
-        const rx = dz(pad.axes[2] || 0);
-
-        let basis;
-        if (LOCOMOTION_FRAME === 'head') basis = getHeadBasis(renderer, camera);
-        else if (LOCOMOTION_FRAME === 'rig') basis = getRigBasis(xrRig);
-        else basis = getControllerBasis(renderer.xr.getController ? renderer.xr.getController(0) : null);
-
-        TMP_MOVE.set(0, 0, 0)
-            .addScaledVector(basis.right, lx * moveSpeed * dt)
-            .addScaledVector(basis.forward, -ly * moveSpeed * dt);
-
-        player.pos.copy(xrRig.position);
-        player.pos.set(xrRig.position.x, player.pos.y, xrRig.position.z);
-        moveWithCollisions(TMP_MOVE);
-
-        xrRig.position.set(player.pos.x, xrRig.position.y, player.pos.z);
-
-        if (!snapCooldown) {
-            if (rx > 0.7) { xrRig.rotation.y -= SNAP_ANGLE; snapCooldown = true; }
-            else if (rx < -0.7) { xrRig.rotation.y += SNAP_ANGLE; snapCooldown = true; }
+            // libera cooldown quando soltar o analógico
+            if (snapCooldown && Math.abs(rx) < 0.2) {
+                snapCooldown = false;
+            }
         }
-        if (snapCooldown && Math.abs(rx) < 0.2) snapCooldown = false;
-    }
-
-    findNearestInteractable();
-
-    if (pad) handleInteractionButton(pad);
-
-    const xrC = renderer.xr.getCamera(camera);
-    for (const it of interactables) {
-        if (it.panelSprite.visible) {
-            it.panelSprite.quaternion.copy(xrC.quaternion);
+        const yr = playerYRange();
+        if (Math.random() < 0.01) { // loga de vez em quando
+            console.log('YR(min,max)=', yr.min.toFixed(2), yr.max.toFixed(2));
         }
-    }
 
-    renderer.render(scene, camera);
-}
+        // 1) descobrir alvo mais próximo
+        findNearestInteractable();
 
-function startRenderLoop() {
-    renderer.setAnimationLoop(renderLoop);
+        // 2) ler botão e alternar painel quando aplicável
+        if (pad) handleInteractionButton(pad);
+
+        // 3) virar os painéis para a câmera (billboard)
+        const xrC = renderer.xr.getCamera(camera);
+        for (const it of interactables) {
+            if (it.panelSprite.visible) {
+                // faz o painel “olhar” para a câmera
+                it.panelSprite.quaternion.copy(xrC.quaternion);
+            }
+        }
+        renderer.render(scene, camera);
+    });
 }
+animate();
+
+// const pad = getPad();
+// console.log(pad.buttons);
